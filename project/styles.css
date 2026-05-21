@@ -1,0 +1,165 @@
+/* Cute Diary Accounting App — base styles */
+
+/* 辰宇落雁體 — 由 Chenyu-otf 開源，OFL 1.1 授權 */
+@font-face {
+  font-family: 'ChenYuluoyan';
+  src: url('https://cdn.jsdelivr.net/gh/Chenyu-otf/chenyuluoyan_thin@main/ChenYuluoyan-2.0-Thin.ttf') format('truetype');
+  font-weight: 100 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* sakura default palette — overridden by JS Tweaks */
+  --bg: #FFF6F0;
+  --bg-paper: #FFFAF5;
+  --card: #FFFFFF;
+  --ink: #4A3A35;
+  --ink-soft: #8C7670;
+  --ink-faint: #C4ADA5;
+
+  --accent: #FF8FAB;      /* primary pink */
+  --accent-soft: #FFC2D1;
+  --accent-faint: #FFE5EC;
+
+  --secondary: #FFB97A;   /* peach */
+  --secondary-soft: #FFE0C2;
+
+  --mint: #9DD6B0;
+  --sky: #A8D8F0;
+  --lavender: #C9B8F0;
+  --yellow: #FFE08A;
+
+  --income: #7DCBA8;
+  --expense: #F08FA8;
+
+  --shadow-sm: 0 2px 0 rgba(74, 58, 53, 0.05);
+  --shadow-md: 0 4px 12px rgba(255, 143, 171, 0.12);
+  --shadow-card: 0 6px 20px rgba(255, 143, 171, 0.15);
+}
+
+body {
+  margin: 0;
+  background: #F5F0EC;
+  background-image:
+    radial-gradient(circle at 20% 30%, #FFE5EC 0%, transparent 40%),
+    radial-gradient(circle at 80% 70%, #E5F0FF 0%, transparent 40%),
+    radial-gradient(circle at 50% 50%, #FFF6F0 0%, #F5F0EC 100%);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  box-sizing: border-box;
+  font-family: 'Noto Sans TC', -apple-system, system-ui, sans-serif;
+}
+
+/* paper-texture background for screen content */
+.paper-bg {
+  background-color: var(--bg);
+  background-image:
+    radial-gradient(circle, rgba(196, 173, 165, 0.18) 1px, transparent 1.2px);
+  background-size: 18px 18px;
+  background-position: 0 0;
+}
+
+/* handwritten font */
+.hand {
+  font-family: -apple-system, "SF Pro Display", "PingFang TC", "PingFang SC", "Helvetica Neue", system-ui, sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.hand-en {
+  font-family: 'Caveat', 'ChenYuluoyan', cursive;
+  font-weight: 600;
+}
+
+/* ── (Note: the experimental "hand level" Tweak was removed —
+   only diary body uses handwritten font now, applied inline in screen-diary.jsx) */
+
+/* washi tape — rotated colored strip */
+.tape {
+  position: absolute;
+  width: 80px;
+  height: 22px;
+  background: var(--accent-soft);
+  opacity: 0.85;
+  background-image:
+    repeating-linear-gradient(45deg,
+      transparent 0,
+      transparent 6px,
+      rgba(255, 255, 255, 0.4) 6px,
+      rgba(255, 255, 255, 0.4) 10px);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* dashed underline cute */
+.dashed-border {
+  border: 1.5px dashed var(--accent-soft);
+  border-radius: 18px;
+}
+
+/* sparkle dots */
+@keyframes twinkle {
+  0%, 100% { opacity: 0.4; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.1); }
+}
+
+.sparkle {
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(-2deg); }
+  50% { transform: rotate(2deg); }
+}
+
+.wiggle {
+  animation: wiggle 3s ease-in-out infinite;
+  transform-origin: center bottom;
+}
+
+@keyframes float-up {
+  0% { transform: translateY(0); opacity: 0; }
+  20% { opacity: 1; }
+  100% { transform: translateY(-30px); opacity: 0; }
+}
+
+@keyframes pop-in {
+  0% { transform: scale(0.85); opacity: 0; }
+  60% { transform: scale(1.03); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.pop-in {
+  animation: pop-in 0.35s ease-out;
+}
+
+@keyframes slide-up {
+  0% { transform: translateY(100%); }
+  100% { transform: translateY(0); }
+}
+
+/* no scrollbar */
+::-webkit-scrollbar { width: 0; height: 0; display: none; }
+* { scrollbar-width: none; }
+
+/* button press */
+.tap {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  cursor: pointer;
+  user-select: none;
+}
+.tap:active { transform: scale(0.96); }
+
+/* category bubble */
+.cat-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+  font-weight: 500;
+}
