@@ -199,6 +199,30 @@ function PaletteRadio({ value, onChange }) {
   );
 }
 
+// ─── streak calculator ─────────────────────────────────
+function calculateStreak(transactions) {
+  const dateSet = new Set(
+    transactions
+      .filter(tx => tx.createdAt)
+      .map(tx => {
+        const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
+        return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+      })
+  );
+  const today = new Date();
+  const todayKey = `${today.getFullYear()}-${today.getMonth()}-${today.getDate()}`;
+  const startOffset = dateSet.has(todayKey) ? 0 : 1;
+  let streak = 0;
+  for (let i = startOffset; i <= 365; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() - i);
+    const key = `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    if (dateSet.has(key)) streak++;
+    else break;
+  }
+  return streak;
+}
+
 function App() {
   const [tab, setTab] = useStateApp('home');
   const [addOpen, setAddOpen] = useStateApp(false);
@@ -211,21 +235,19 @@ function App() {
   const [categoriesOpen, setCategoriesOpen] = useStateApp(false);
   const [foxOpen, setFoxOpen] = useStateApp(false);
 
-  // Onboarding: show on first launch (no localStorage marker yet)
-  const [showOnboarding, setShowOnboarding] = useStateApp(() => {
-    try { return !localStorage.getItem('onboardingDone'); } catch { return true; }
-  });
+  const [showOnboarding, setShowOnboarding] = useStateApp(false);
+  const [profileChecking, setProfileChecking] = useStateApp(true);
 
-  // Fox state — persisted via localStorage so the user's pet survives reloads
+  // Fox state — localStorage as cache, Firestore as source of truth
   const [foxState, setFoxState] = useStateApp(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('foxState') || 'null');
       if (saved && saved.name) return saved;
     } catch {}
     return {
-      name: '小桃', level: 8, exp: 68, days: 247,
+      name: '小桃', level: 1, exp: 0, days: 1,
       fur: 'orange', accessory: 'bow', mood: 'happy',
-      satiety: 72, energy: 84, moodScore: 90,
+      satiety: 80, energy: 80, moodScore: 90,
     };
   });
 
@@ -249,9 +271,28 @@ function App() {
     Object.entries(p).forEach(([k, v]) => document.documentElement.style.setProperty(k, v));
   }, [tweaks.palette]);
 
-  // auth state
+  // auth state + profile check (determines onboarding)
   useEffectApp(() => {
-    return window.auth.onAuthStateChanged(u => { setUser(u); setAuthReady(true); });
+    return window.auth.onAuthStateChanged(u => {
+      setUser(u);
+      setAuthReady(true);
+      if (!u) { setProfileChecking(false); return; }
+      // Fast path: localStorage flag means onboarding already done
+      const alreadyDone = (() => { try { return !!localStorage.getItem('onboardingDone'); } catch { return false; } })();
+      if (alreadyDone) { setProfileChecking(false); return; }
+      // Slow path: new device or cleared localStorage — check Firestore
+      window.db.collection('users').doc(u.uid).collection('settings').doc('profile').get()
+        .then(doc => {
+          if (doc.exists) {
+            setFoxState(prev => ({ ...prev, ...doc.data() }));
+            try { localStorage.setItem('onboardingDone', '1'); } catch {}
+          } else {
+            setShowOnboarding(true);
+          }
+        })
+        .catch(() => setShowOnboarding(true))
+        .finally(() => setProfileChecking(false));
+    });
   }, []);
 
   // transactions subscription
@@ -355,7 +396,7 @@ function App() {
     balance: income - expense,
     income,
     expense,
-    streak: SEED_DATA.streak,
+    streak: calculateStreak(transactions),
     foxName: foxState.name,
     level: foxState.level,
     foxFur: foxState.fur,
@@ -373,7 +414,7 @@ function App() {
     }
   };
 
-  if (!authReady) return (
+  if (!authReady || profileChecking) return (
     <div className="paper-bg" style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div style={{ fontSize: 36, animation: 'wiggle 1s infinite' }}>✿</div>
     </div>
@@ -449,6 +490,19 @@ function App() {
               setFoxState(s => ({ ...s, ...fox }));
               try { localStorage.setItem('onboardingDone', '1'); } catch {}
               setShowOnboarding(false);
+              if (user) {
+                const uid = user.uid;
+                // Save fox profile to Firestore
+                window.db.collection('users').doc(uid).collection('settings').doc('profile').set(fox);
+                // Build budget from picked categories (equal split, round to 500)
+                const perCat = pickedCats.length > 0
+                  ? Math.round(budget / pickedCats.length / 500) * 500
+                  : 0;
+                const budgetItems = pickedCats.map(id => ({ id, total: perCat, on: true, vault: true }));
+                window.db.collection('users').doc(uid).collection('settings').doc('budget').set({
+                  total: budget, warnAt: 80, remindOn: true, items: budgetItems,
+                });
+              }
             }}
           />
         )}
