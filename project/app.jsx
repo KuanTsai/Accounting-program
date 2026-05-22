@@ -21,7 +21,7 @@ const SEED_DATA = {
 };
 
 // ─── bottom nav ────────────────────────────────────────
-function BottomNav({ current, onSelect, onAdd }) {
+function BottomNav({ current, onSelect, onAdd, isMobile }) {
   const tabs = [
     { id: 'home', label: '首頁', icon: (c) => (
       <svg width="22" height="22" viewBox="0 0 24 24" fill={c.active ? c.color : 'none'} stroke={c.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -54,7 +54,7 @@ function BottomNav({ current, onSelect, onAdd }) {
   return (
     <div style={{
       position: 'absolute', bottom: 0, left: 0, right: 0, zIndex: 30,
-      paddingBottom: 18, pointerEvents: 'none',
+      paddingBottom: isMobile ? 'env(safe-area-inset-bottom, 8px)' : 18, pointerEvents: 'none',
     }}>
       <div style={{
         margin: '0 14px', height: 70, borderRadius: 28,
@@ -268,18 +268,22 @@ function App() {
     }
   };
 
-  return (
-    <IOSDevice width={402} height={874}>
-      <div data-screen-label="App" className="paper-bg" style={{
-        height: '100%', position: 'relative',
-        overflow: 'hidden',
-      }}>
-        {/* status bar already in IOSDevice */}
-        <div style={{ height: 54 }}/> {/* statusbar spacer */}
-        <div style={{ height: 'calc(100% - 54px)', overflowY: 'auto' }} data-screen-label={tab}>
-          {renderScreen()}
-        </div>
-        <BottomNav current={tab} onSelect={setTab} onAdd={handleAdd}/>
+  const isMobile = window.matchMedia('(max-width: 600px)').matches;
+  const appShell = (
+    <div data-screen-label="App" className="paper-bg" style={isMobile ? {
+      position: 'fixed', inset: 0, overflow: 'hidden',
+      display: 'flex', flexDirection: 'column',
+    } : {
+      height: '100%', position: 'relative', overflow: 'hidden',
+    }}>
+      <div style={{ height: isMobile ? 'env(safe-area-inset-top, 44px)' : '54px', flexShrink: 0 }}/>
+      <div style={isMobile
+        ? { flex: 1, overflowY: 'auto', paddingBottom: 100 }
+        : { height: 'calc(100% - 54px)', overflowY: 'auto' }
+      } data-screen-label={tab}>
+        {renderScreen()}
+      </div>
+      <BottomNav current={tab} onSelect={setTab} onAdd={handleAdd} isMobile={isMobile}/>
         <AddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={handleSaved}/>
         {budgetOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
@@ -348,7 +352,11 @@ function App() {
         )}
         <Toast show={toast} withDiary={toastDiary}/>
       </div>
-
+  );
+  if (isMobile) return appShell;
+  return (
+    <IOSDevice width={402} height={874}>
+      {appShell}
       {/* Tweaks panel */}
       {window.TweaksPanel && (
         <TweaksPanel title="Tweaks">
