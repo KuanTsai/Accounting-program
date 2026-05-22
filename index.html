@@ -2,8 +2,14 @@
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8"/>
-<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
 <title>小桃の記帳日記</title>
+<meta name="theme-color" content="#FF8FAB"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="小桃記帳"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icons/icon-192.png"/>
 
 <!-- Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com"/>
@@ -37,5 +43,12 @@
 <script type="text/babel" src="project/screen-onboarding.jsx"></script>
 <script type="text/babel" src="project/screen-close.jsx"></script>
 <script type="text/babel" src="project/app.jsx"></script>
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/Accounting-program/sw.js');
+  });
+}
+</script>
 </body>
 </html>
