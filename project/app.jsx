@@ -236,6 +236,9 @@ function App() {
   const [toastDiary, setToastDiary] = useStateApp(false);
   const [foxMood, setFoxMood] = useStateApp('happy');
   const [tweaks, setTweak] = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : [TWEAK_DEFAULTS, () => {}];
+  const [user, setUser] = useStateApp(null);
+  const [authReady, setAuthReady] = useStateApp(false);
+  const [transactions, setTransactions] = useStateApp([]);
 
   // apply palette
   useEffectApp(() => {
@@ -243,21 +246,63 @@ function App() {
     Object.entries(p).forEach(([k, v]) => document.documentElement.style.setProperty(k, v));
   }, [tweaks.palette]);
 
+  // auth state
+  useEffectApp(() => {
+    return window.auth.onAuthStateChanged(u => { setUser(u); setAuthReady(true); });
+  }, []);
+
+  // transactions subscription
+  useEffectApp(() => {
+    if (!user) { setTransactions([]); return; }
+    return window.db.collection('users').doc(user.uid).collection('transactions')
+      .orderBy('createdAt', 'desc').limit(200)
+      .onSnapshot(snap => setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, [user]);
+
   const handleAdd = () => setAddOpen(true);
-  const handleSaved = (payload) => {
+  const handleSaved = async (payload) => {
     setFoxMood('celebrate');
     setToast(true);
     setToastDiary(!!(payload && payload.diary));
     setTimeout(() => { setToast(false); setFoxMood('happy'); }, 2000);
+    if (user && payload) {
+      const raw = parseFloat(payload.amount) || 0;
+      const amt = payload.type === 'expense' ? -raw : raw;
+      const now = new Date();
+      const hh = now.getHours().toString().padStart(2, '0');
+      const mm = now.getMinutes().toString().padStart(2, '0');
+      await window.db.collection('users').doc(user.uid).collection('transactions').add({
+        cat: payload.cat,
+        label: (CATEGORIES.find(c => c.id === payload.cat) || {}).label || payload.cat,
+        amt,
+        note: payload.note || null,
+        mood: payload.mood || null,
+        diary: payload.diary || null,
+        time: `今天 ${hh}:${mm}`,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+      });
+    }
   };
 
   const renderScreen = () => {
+    const now = new Date();
+    const monthlyTxs = transactions.filter(tx => {
+      if (!tx.createdAt) return false;
+      const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+    });
+    const income = monthlyTxs.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0);
+    const expense = Math.abs(monthlyTxs.filter(t => t.amt < 0).reduce((s, t) => s + t.amt, 0));
     const liveData = {
-      ...SEED_DATA,
+      balance: income - expense,
+      income,
+      expense,
+      streak: SEED_DATA.streak,
       foxName: foxState.name,
       level: foxState.level,
       foxFur: foxState.fur,
       foxAccessory: foxState.accessory,
+      recent: transactions.slice(0, 20),
     };
     switch (tab) {
       case 'home': return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)}/>;
@@ -267,6 +312,13 @@ function App() {
       default: return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd}/>;
     }
   };
+
+  if (!authReady) return (
+    <div className="paper-bg" style={{ position: 'fixed', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <div style={{ fontSize: 36, animation: 'wiggle 1s infinite' }}>✿</div>
+    </div>
+  );
+  if (!user) return <LoginScreen/>;
 
   return (
     <div data-screen-label="App" className="paper-bg" style={{
