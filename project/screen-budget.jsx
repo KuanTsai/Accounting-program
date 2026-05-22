@@ -1,30 +1,72 @@
 // Budget management screen — set total + per-category, warnings, reminders
 
-const { useState: useStateBudget } = React;
+const { useState: useStateBudget, useEffect: useEffectBudget } = React;
 
-function BudgetScreen({ onClose }) {
+const DEFAULT_ITEMS = [
+  { id: 'food',      total: 6000, on: true,  vault: true  },
+  { id: 'shop',      total: 3500, on: true,  vault: true  },
+  { id: 'fun',       total: 4000, on: true,  vault: true  },
+  { id: 'drink',     total: 2000, on: true,  vault: true  },
+  { id: 'transport', total: 1500, on: true,  vault: false },
+  { id: 'beauty',    total: 1500, on: true,  vault: true  },
+  { id: 'travel',    total: 3000, on: false, vault: false },
+];
+
+function BudgetScreen({ onClose, transactions = [] }) {
   const [total, setTotal] = useStateBudget(20000);
   const [warnAt, setWarnAt] = useStateBudget(80);
   const [remindOn, setRemindOn] = useStateBudget(true);
+  const [items, setItems] = useStateBudget(DEFAULT_ITEMS);
+  const [saving, setSaving] = useStateBudget(false);
 
-  const [items, setItems] = useStateBudget([
-    { id: 'food',      total: 6000, used: 4200, on: true,  vault: true  },
-    { id: 'shop',      total: 3500, used: 3100, on: true,  vault: true  },
-    { id: 'fun',       total: 4000, used: 2400, on: true,  vault: true  },
-    { id: 'drink',     total: 2000, used: 1850, on: true,  vault: true  },
-    { id: 'transport', total: 1500, used: 750,  on: true,  vault: false },
-    { id: 'beauty',    total: 1500, used: 1200, on: true,  vault: true  },
-    { id: 'travel',    total: 3000, used: 0,    on: false, vault: false },
-  ]);
+  // Load budget settings from Firestore
+  useEffectBudget(() => {
+    const uid = window.auth.currentUser?.uid;
+    if (!uid) return;
+    window.db.collection('users').doc(uid).collection('settings').doc('budget').get()
+      .then(doc => {
+        if (!doc.exists) return;
+        const d = doc.data();
+        if (d.total)   setTotal(d.total);
+        if (d.warnAt)  setWarnAt(d.warnAt);
+        if (d.remindOn !== undefined) setRemindOn(d.remindOn);
+        if (d.items)   setItems(d.items);
+      });
+  }, []);
 
-  const allocated = items.filter(i => i.on).reduce((s, i) => s + i.total, 0);
-  const used = items.reduce((s, i) => s + i.used, 0);
+  // Calculate real used amounts from this month's transactions
+  const now = new Date();
+  const catUsed = {};
+  transactions.filter(tx => {
+    if (!tx.createdAt || tx.amt >= 0) return false;
+    const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  }).forEach(tx => {
+    catUsed[tx.cat] = (catUsed[tx.cat] || 0) + Math.abs(tx.amt);
+  });
+
+  const liveItems = items.map(it => ({ ...it, used: catUsed[it.id] || 0 }));
+
+  const allocated = liveItems.filter(i => i.on).reduce((s, i) => s + i.total, 0);
+  const used = liveItems.reduce((s, i) => s + i.used, 0);
   const remaining = total - used;
   const pct = (used / total) * 100;
   const overWarn = pct > warnAt;
 
   const updateItem = (id, key, val) => {
     setItems(items.map(i => i.id === id ? { ...i, [key]: val } : i));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    const uid = window.auth.currentUser?.uid;
+    if (uid) {
+      await window.db.collection('users').doc(uid).collection('settings').doc('budget').set({
+        total, warnAt, remindOn, items,
+      });
+    }
+    setSaving(false);
+    onClose();
   };
 
   return (
@@ -48,7 +90,7 @@ function BudgetScreen({ onClose }) {
         <div className="tap" style={{
           padding: '6px 14px', borderRadius: 999, background: 'var(--accent)',
           color: '#fff', fontSize: 13, fontWeight: 600,
-        }} onClick={onClose}>儲存</div>
+        }} onClick={handleSave}>{saving ? '儲存中…' : '儲存'}</div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 30 }}>
@@ -179,7 +221,7 @@ function BudgetScreen({ onClose }) {
           </div>
 
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {items.map(it => (
+            {liveItems.map(it => (
               <BudgetItem key={it.id} item={it} onChange={(k, v) => updateItem(it.id, k, v)}/>
             ))}
 
