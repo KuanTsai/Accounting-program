@@ -2,36 +2,13 @@
 
 const { useState: useStateVault } = React;
 
-function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit }) {
+function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, goalPots = [], autoPots = [] }) {
   const [tab, setTab] = useStateVault('all'); // all | auto | goal
 
-  // ── mock data ─────────────────────────────────
-  const autoPots = [
-    { id: 'food',  catId: 'food',  label: '飲食金庫', total: 3200,  monthly: 1800, history: [['5月', 1800], ['4月', 1400]] },
-    { id: 'life',  catId: 'home',  label: '生活金庫', total: 8400,  monthly: 5000, history: [['5月', 5000], ['4月', 2400], ['3月', 1000]] },
-    { id: 'fun',   catId: 'fun',   label: '玩樂金庫', total: 12200, monthly: 2000, history: [['5月', 2000], ['4月', 3200], ['3月', 7000]] },
-    { id: 'shop',  catId: 'shop',  label: '購物金庫', total: 800,   monthly: 400,  history: [['5月', 400], ['4月', 400]] },
-  ];
-
-  const goalPots = [
-    {
-      id: 'kyoto', label: '京都旅行', target: 30000, saved: 18000,
-      color: '#F590BB', bg: '#FFE0EE', icon: 'travel', deadline: '9月',
-    },
-    {
-      id: 'ipad', label: '換新 iPad', target: 25000, saved: 5500,
-      color: '#A8D8F0', bg: '#E0F2FA', icon: 'study', deadline: null,
-    },
-    {
-      id: 'emergency', label: '緊急金', target: 50000, saved: 35000,
-      color: '#9DD6B0', bg: '#E2F4E8', icon: 'health', deadline: null,
-    },
-  ];
-
-  const totalAuto = autoPots.reduce((s, p) => s + p.total, 0);
-  const totalGoal = goalPots.reduce((s, p) => s + p.saved, 0);
+  const totalAuto = autoPots.reduce((s, p) => s + (p.total || 0), 0);
+  const totalGoal = goalPots.reduce((s, p) => s + (p.saved || 0), 0);
   const totalAll = totalAuto + totalGoal;
-  const thisMonth = autoPots.reduce((s, p) => s + p.monthly, 0);
+  const thisMonth = autoPots.reduce((s, p) => s + (p.monthly || 0), 0);
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
@@ -233,7 +210,7 @@ function AutoPotCard({ pot, onWithdraw }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 600 }}>{pot.label}</div>
           <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 2 }}>
-            本月 +${pot.monthly.toLocaleString()} · 累積 {pot.history.length} 個月
+            本月 +${(pot.monthly || 0).toLocaleString()} · 累積 {(pot.history || []).length} 個月
           </div>
         </div>
         <div style={{ textAlign: 'right' }}>
@@ -248,8 +225,8 @@ function AutoPotCard({ pot, onWithdraw }) {
       </div>
       {/* mini history bars */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, marginTop: 10, height: 22 }}>
-        {pot.history.slice().reverse().map((h, i) => {
-          const max = Math.max(...pot.history.map(x => x[1]));
+        {(pot.history || []).slice().reverse().map((h, i) => {
+          const max = Math.max(...(pot.history || []).map(x => x[1]), 1);
           const h2 = Math.max(4, (h[1] / max) * 22);
           return (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>

@@ -239,6 +239,8 @@ function App() {
   const [user, setUser] = useStateApp(null);
   const [authReady, setAuthReady] = useStateApp(false);
   const [transactions, setTransactions] = useStateApp([]);
+  const [goalPots, setGoalPots] = useStateApp([]);
+  const [autoPots, setAutoPots] = useStateApp([]);
 
   // apply palette
   useEffectApp(() => {
@@ -257,6 +259,18 @@ function App() {
     return window.db.collection('users').doc(user.uid).collection('transactions')
       .orderBy('createdAt', 'desc').limit(200)
       .onSnapshot(snap => setTransactions(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, [user]);
+
+  // vault subscriptions
+  useEffectApp(() => {
+    if (!user) { setGoalPots([]); setAutoPots([]); return; }
+    const uid = user.uid;
+    const unsubGoals = window.db.collection('users').doc(uid).collection('goals')
+      .orderBy('createdAt', 'asc')
+      .onSnapshot(snap => setGoalPots(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubAuto = window.db.collection('users').doc(uid).collection('autopots')
+      .onSnapshot(snap => setAutoPots(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
+    return () => { unsubGoals(); unsubAuto(); };
   }, [user]);
 
   const handleAdd = () => setAddOpen(true);
@@ -288,26 +302,58 @@ function App() {
     }
   };
 
-  const renderScreen = () => {
-    const now = new Date();
-    const monthlyTxs = transactions.filter(tx => {
-      if (!tx.createdAt) return false;
-      const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
-      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  const handleSaveGoal = async (data) => {
+    if (!user) return;
+    await window.db.collection('users').doc(user.uid).collection('goals').add({
+      label: data.name,
+      target: data.amount,
+      saved: data.initial || 0,
+      color: data.color,
+      bg: data.bg,
+      icon: data.icon,
+      deadline: data.deadline || null,
+      createdAt: firebase.firestore.FieldValue.serverTimestamp(),
     });
-    const income = monthlyTxs.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0);
-    const expense = Math.abs(monthlyTxs.filter(t => t.amt < 0).reduce((s, t) => s + t.amt, 0));
-    const liveData = {
-      balance: income - expense,
-      income,
-      expense,
-      streak: SEED_DATA.streak,
-      foxName: foxState.name,
-      level: foxState.level,
-      foxFur: foxState.fur,
-      foxAccessory: foxState.accessory,
-      recent: transactions.slice(0, 20),
-    };
+    setNewGoalOpen(false);
+  };
+
+  const handleDepositConfirm = async ({ pot, amount }) => {
+    if (!user) return;
+    await window.db.collection('users').doc(user.uid).collection('goals').doc(pot.id).update({
+      saved: firebase.firestore.FieldValue.increment(amount),
+    });
+    setDepositPot(null);
+  };
+
+  const handleWithdrawConfirm = async ({ pot, amount }) => {
+    if (!user) return;
+    await window.db.collection('users').doc(user.uid).collection('autopots').doc(pot.id).update({
+      total: firebase.firestore.FieldValue.increment(-amount),
+    });
+    setWithdrawPot(null);
+  };
+
+  const now = new Date();
+  const monthlyTxs = transactions.filter(tx => {
+    if (!tx.createdAt) return false;
+    const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
+  const income = monthlyTxs.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0);
+  const expense = Math.abs(monthlyTxs.filter(t => t.amt < 0).reduce((s, t) => s + t.amt, 0));
+  const liveData = {
+    balance: income - expense,
+    income,
+    expense,
+    streak: SEED_DATA.streak,
+    foxName: foxState.name,
+    level: foxState.level,
+    foxFur: foxState.fur,
+    foxAccessory: foxState.accessory,
+    recent: transactions.slice(0, 20),
+  };
+
+  const renderScreen = () => {
     switch (tab) {
       case 'home': return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onDelete={handleDelete}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions}/>;
@@ -347,32 +393,33 @@ function App() {
               onAddGoal={() => setNewGoalOpen(true)}
               onWithdraw={(pot) => setWithdrawPot(pot)}
               onDeposit={(pot) => setDepositPot(pot)}
+              goalPots={goalPots}
+              autoPots={autoPots}
             />
           </div>
         )}
         {newGoalOpen && (
           <NewGoalScreen
             onClose={() => setNewGoalOpen(false)}
-            onSave={() => setNewGoalOpen(false)}
+            onSave={handleSaveGoal}
           />
         )}
         {withdrawPot && (
           <WithdrawScreen
             pot={withdrawPot}
             onClose={() => setWithdrawPot(null)}
-            onConfirm={() => setWithdrawPot(null)}
+            onConfirm={handleWithdrawConfirm}
           />
         )}
         {depositPot && (
           <DepositScreen
             pot={depositPot}
             sources={[
-              { id: 'main', label: '主帳戶', balance: 28450 },
-              { id: 'life', label: '生活金庫', balance: 8400 },
-              { id: 'fun', label: '玩樂金庫', balance: 12200 },
+              { id: 'main', label: '主帳戶', balance: liveData.balance },
+              ...autoPots.filter(p => (p.total || 0) > 0).map(p => ({ id: p.id, label: p.label, balance: p.total })),
             ]}
             onClose={() => setDepositPot(null)}
-            onConfirm={() => setDepositPot(null)}
+            onConfirm={handleDepositConfirm}
           />
         )}
         {categoriesOpen && (
