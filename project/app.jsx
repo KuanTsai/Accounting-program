@@ -106,7 +106,7 @@ function BottomNav({ current, onSelect, onAdd, isMobile }) {
 }
 
 // ─── celebration toast (after add) ─────────────────────
-function Toast({ show, withDiary }) {
+function Toast({ show, withDiary, streak = 0 }) {
   if (!show) return null;
   return (
     <div style={{
@@ -129,7 +129,7 @@ function Toast({ show, withDiary }) {
           {withDiary ? '記錄＋日記都完成！' : '你做得很棒！'}
         </div>
         <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4 }}>
-          {withDiary ? '+18 EXP　·　多了一篇日記 ✿' : '+12 EXP　·　連續第 12 天'}
+          {withDiary ? '+18 EXP　·　多了一篇日記 ✿' : `+10 EXP　·　連續第 ${streak} 天`}
         </div>
       </div>
     </div>
@@ -334,6 +334,19 @@ function App() {
     setToast(true);
     setToastDiary(!!(payload && payload.diary));
     setTimeout(() => { setToast(false); setFoxMood('happy'); }, 2000);
+
+    // EXP gain
+    const expGain = (payload && payload.diary) ? 18 : 10;
+    const newExpRaw = foxState.exp + expGain;
+    const leveled = newExpRaw >= 100;
+    const newExp = leveled ? newExpRaw - 100 : newExpRaw;
+    const newLevel = leveled ? foxState.level + 1 : foxState.level;
+    setFoxState(s => ({ ...s, exp: newExp, level: newLevel, mood: leveled ? 'celebrate' : 'happy' }));
+    if (user) {
+      window.db.collection('users').doc(user.uid).collection('settings').doc('profile')
+        .set({ exp: newExp, level: newLevel }, { merge: true });
+    }
+
     if (user && payload) {
       const raw = parseFloat(payload.amount) || 0;
       const amt = payload.type === 'expense' ? -raw : raw;
@@ -392,6 +405,11 @@ function App() {
   });
   const income = monthlyTxs.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0);
   const expense = Math.abs(monthlyTxs.filter(t => t.amt < 0).reduce((s, t) => s + t.amt, 0));
+  const todayTxs = transactions.filter(tx => {
+    if (!tx.createdAt) return false;
+    const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
+    return d.toDateString() === now.toDateString();
+  });
   const liveData = {
     balance: income - expense,
     income,
@@ -399,9 +417,10 @@ function App() {
     streak: calculateStreak(transactions),
     foxName: foxState.name,
     level: foxState.level,
+    foxExp: foxState.exp,
     foxFur: foxState.fur,
     foxAccessory: foxState.accessory,
-    recent: transactions.slice(0, 20),
+    recent: todayTxs,
   };
 
   const renderScreen = () => {
@@ -516,7 +535,7 @@ function App() {
             />
           </div>
         )}
-        <Toast show={toast} withDiary={toastDiary}/>
+        <Toast show={toast} withDiary={toastDiary} streak={liveData.streak}/>
       </div>
   );
 }

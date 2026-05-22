@@ -31,7 +31,7 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
 function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, showCloseBanner = true }) {
-  const { balance, income, expense, recent, streak, level, foxName, foxFur = 'orange', foxAccessory = 'none' } = data;
+  const { balance, income, expense, recent, streak, level, foxExp = 0, foxName, foxFur = 'orange', foxAccessory = 'none' } = data;
   const monthLabel = `${new Date().getMonth() + 1}月`;
 
   return (
@@ -129,11 +129,11 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
           {/* exp bar */}
           <div style={{ marginTop: 14, background: '#fff', borderRadius: 999, height: 10, padding: 2, position: 'relative' }}>
             <div style={{
-              height: '100%', width: '68%', borderRadius: 999,
+              height: '100%', width: `${foxExp}%`, borderRadius: 999,
               background: 'linear-gradient(90deg, var(--accent) 0%, var(--secondary) 100%)'
             }} />
             <span style={{ position: 'absolute', right: 6, top: -16, fontSize: 10, color: 'var(--ink-soft)', fontFamily: 'Caveat', fontWeight: 600 }}>
-              EXP 68 / 100
+              EXP {foxExp} / 100
             </span>
           </div>
         </div>

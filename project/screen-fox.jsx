@@ -25,6 +25,13 @@ function FoxScreen({ foxState, setFoxState, onClose }) {
   const [tab, setTab] = useStateFox('customize'); // customize | history
   const [floatNote, setFloatNote] = useStateFox(null);
 
+  const saveProfile = (updates) => {
+    const u = window.auth.currentUser;
+    if (!u) return;
+    window.db.collection('users').doc(u.uid).collection('settings').doc('profile')
+      .set(updates, { merge: true });
+  };
+
   const showNote = (text, color = 'var(--accent)') => {
     setFloatNote({ text, color, key: Date.now() });
     setTimeout(() => setFloatNote(null), 1200);
@@ -144,7 +151,8 @@ function FoxScreen({ foxState, setFoxState, onClose }) {
                     }}
                   />
                   <span className="tap" onClick={() => {
-                    if (nameInput.trim()) setFoxState(s => ({ ...s, name: nameInput.trim() }));
+                    const trimmed = nameInput.trim();
+                    if (trimmed) { setFoxState(s => ({ ...s, name: trimmed })); saveProfile({ name: trimmed }); }
                     setEditingName(false);
                   }} style={{
                     color: 'var(--accent)', fontSize: 13, fontWeight: 700,
@@ -221,7 +229,7 @@ function FoxScreen({ foxState, setFoxState, onClose }) {
               {FUR_OPTIONS.map(f => {
                 const sel = foxState.fur === f.id;
                 return (
-                  <div key={f.id} className="tap" onClick={() => setFoxState(s => ({ ...s, fur: f.id }))}
+                  <div key={f.id} className="tap" onClick={() => { setFoxState(s => ({ ...s, fur: f.id })); saveProfile({ fur: f.id }); }}
                     style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
                     <div style={{
                       width: 42, height: 42, borderRadius: 21, margin: '0 auto',
@@ -252,7 +260,7 @@ function FoxScreen({ foxState, setFoxState, onClose }) {
                 const sel = foxState.accessory === a.id;
                 return (
                   <div key={a.id} className="tap"
-                    onClick={() => !locked && setFoxState(s => ({ ...s, accessory: a.id }))}
+                    onClick={() => { if (!locked) { setFoxState(s => ({ ...s, accessory: a.id })); saveProfile({ accessory: a.id }); } }}
                     style={{
                       textAlign: 'center', cursor: locked ? 'not-allowed' : 'pointer',
                       opacity: locked ? 0.45 : 1,
