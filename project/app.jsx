@@ -310,7 +310,7 @@ function App() {
     };
     switch (tab) {
       case 'home': return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onDelete={handleDelete}/>;
-      case 'stats': return <StatsScreen data={liveData}/>;
+      case 'stats': return <StatsScreen data={liveData} transactions={transactions}/>;
       case 'diary': return <DiaryScreen/>;
       case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} foxState={foxState}/>;
       default: return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd}/>;
