@@ -30,7 +30,7 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // ─────────────────────────────────────────────────────────────
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
-function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete }) {
+function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, showCloseBanner = true }) {
   const { balance, income, expense, recent, streak, level, foxName, foxFur = 'orange', foxAccessory = 'none' } = data;
   const monthLabel = `${new Date().getMonth() + 1}月`;
 
@@ -70,32 +70,34 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
       
 
       {/* month-end ceremony banner */}
-      <div style={{ padding: '4px 20px 0' }}>
-        <div className="tap" onClick={onOpenClose} style={{
-          background: 'linear-gradient(135deg, #FFF1E8 0%, #FFE5D4 100%)',
-          borderRadius: 18, padding: '10px 14px',
-          display: 'flex', alignItems: 'center', gap: 10,
-          border: '1px dashed #FFCBA4',
-          position: 'relative', overflow: 'hidden',
-        }}>
-          <div className="sparkle" style={{ position: 'absolute', top: 6, right: 80, fontSize: 9, color: '#FFB366' }}>✦</div>
-          <div style={{
-            width: 32, height: 32, borderRadius: 10,
-            background: 'linear-gradient(135deg, #FFE08A 0%, #FFB366 100%)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: '#A85F00', fontSize: 14, fontWeight: 700, flexShrink: 0,
-          }}>🌙</div>
-          <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 700 }}>
-              5 月結算時間到了 ✿
+      {showCloseBanner && (
+        <div style={{ padding: '4px 20px 0' }}>
+          <div className="tap" onClick={onOpenClose} style={{
+            background: 'linear-gradient(135deg, #FFF1E8 0%, #FFE5D4 100%)',
+            borderRadius: 18, padding: '10px 14px',
+            display: 'flex', alignItems: 'center', gap: 10,
+            border: '1px dashed #FFCBA4',
+            position: 'relative', overflow: 'hidden',
+          }}>
+            <div className="sparkle" style={{ position: 'absolute', top: 6, right: 80, fontSize: 9, color: '#FFB366' }}>✦</div>
+            <div style={{
+              width: 32, height: 32, borderRadius: 10,
+              background: 'linear-gradient(135deg, #FFE08A 0%, #FFB366 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#A85F00', fontSize: 14, fontWeight: 700, flexShrink: 0,
+            }}>🌙</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 700 }}>
+                {monthLabel}結算時間到了 ✿
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 1 }}>
+                幫你把省下的錢存進小金庫
+              </div>
             </div>
-            <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 1 }}>
-              本月省下 $5,000，來看看要怎麼分配
-            </div>
+            <span style={{ fontSize: 13, color: '#C5751F', fontWeight: 700 }}>結算 →</span>
           </div>
-          <span style={{ fontSize: 13, color: '#C5751F', fontWeight: 700 }}>結算 →</span>
         </div>
-      </div>
+      )}
 
       {/* fox mood card */}
       <div style={{ padding: '8px 20px 0', position: 'relative' }}>

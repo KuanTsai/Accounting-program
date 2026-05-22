@@ -241,6 +241,7 @@ function App() {
   const [transactions, setTransactions] = useStateApp([]);
   const [goalPots, setGoalPots] = useStateApp([]);
   const [autoPots, setAutoPots] = useStateApp([]);
+  const [monthClosed, setMonthClosed] = useStateApp(false);
 
   // apply palette
   useEffectApp(() => {
@@ -271,6 +272,15 @@ function App() {
     const unsubAuto = window.db.collection('users').doc(uid).collection('autopots')
       .onSnapshot(snap => setAutoPots(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     return () => { unsubGoals(); unsubAuto(); };
+  }, [user]);
+
+  // Track whether current month is already closed
+  useEffectApp(() => {
+    if (!user) { setMonthClosed(false); return; }
+    const n = new Date();
+    const closeKey = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+    return window.db.collection('users').doc(user.uid).collection('closes').doc(closeKey)
+      .onSnapshot(doc => setMonthClosed(doc.exists));
   }, [user]);
 
   const handleAdd = () => setAddOpen(true);
@@ -355,7 +365,7 @@ function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onDelete={handleDelete}/>;
+      case 'home': return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions}/>;
       case 'diary': return <DiaryScreen transactions={transactions}/>;
       case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} foxState={foxState}/>;
@@ -444,7 +454,12 @@ function App() {
         )}
         {closeOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
-            <MonthlyCloseScreen onClose={() => setCloseOpen(false)} onConfirm={() => setCloseOpen(false)}/>
+            <MonthlyCloseScreen
+              onClose={() => setCloseOpen(false)}
+              onConfirm={() => setCloseOpen(false)}
+              transactions={transactions}
+              goalPots={goalPots}
+            />
           </div>
         )}
         <Toast show={toast} withDiary={toastDiary}/>
