@@ -260,6 +260,10 @@ function App() {
   }, [user]);
 
   const handleAdd = () => setAddOpen(true);
+  const handleDelete = async (txId) => {
+    if (!user || !txId) return;
+    await window.db.collection('users').doc(user.uid).collection('transactions').doc(txId).delete();
+  };
   const handleSaved = async (payload) => {
     setFoxMood('celebrate');
     setToast(true);
@@ -305,7 +309,7 @@ function App() {
       recent: transactions.slice(0, 20),
     };
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)}/>;
+      case 'home': return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onDelete={handleDelete}/>;
       case 'stats': return <StatsScreen data={liveData}/>;
       case 'diary': return <DiaryScreen/>;
       case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} foxState={foxState}/>;

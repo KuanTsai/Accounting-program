@@ -30,7 +30,7 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // ─────────────────────────────────────────────────────────────
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
-function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox }) {
+function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete }) {
   const { balance, income, expense, recent, streak, level, foxName, foxFur = 'orange', foxAccessory = 'none' } = data;
   const monthLabel = `${new Date().getMonth() + 1}月`;
 
@@ -215,37 +215,64 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox }) 
           <span style={{ fontSize: 12, color: 'var(--accent)', fontWeight: 600 }} onClick={onOpenTx} className="tap">全部 →</span>
         </div>
         <div style={{ background: 'var(--card)', borderRadius: 24, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-          {recent.slice(0, 3).map((tx, i) =>
-          <TxRow key={i} tx={tx} isLast={i === Math.min(2, recent.length - 1)} />
-          )}
+          {recent.length === 0
+            ? <div style={{ padding: '24px 16px', textAlign: 'center', fontSize: 13, color: 'var(--ink-faint)' }}>還沒有記錄，點 ＋ 開始記帳 ✿</div>
+            : recent.slice(0, 5).map((tx, i, arr) =>
+              <TxRow key={tx.id || i} tx={tx} isLast={i === arr.length - 1} onDelete={onDelete} />
+            )
+          }
         </div>
       </div>
     </div>);
 
 }
 
-function TxRow({ tx, isLast }) {
+function TxRow({ tx, isLast, onDelete }) {
+  const [expanded, setExpanded] = useState(false);
+
   return (
-    <div style={{
-      display: 'flex', alignItems: 'center', padding: '12px 16px',
-      borderBottom: isLast ? 'none' : '1px dashed #F5E5DC'
-    }}>
-      <CatBubble id={tx.cat} size={40} />
-      <div style={{ flex: 1, marginLeft: 12, minWidth: 0 }}>
-        <div style={{ fontSize: 15, color: 'var(--ink)', fontWeight: 500 }}>{tx.label}</div>
-        <div style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 2 }}>
-          {tx.time}　·　{tx.note || '一般支出'}
+    <div>
+      <div onClick={() => setExpanded(e => !e)} style={{
+        display: 'flex', alignItems: 'center', padding: '12px 16px',
+        borderBottom: !expanded && isLast ? 'none' : '1px dashed #F5E5DC',
+        cursor: 'pointer',
+      }}>
+        <CatBubble id={tx.cat} size={40} />
+        <div style={{ flex: 1, marginLeft: 12, minWidth: 0 }}>
+          <div style={{ fontSize: 15, color: 'var(--ink)', fontWeight: 500 }}>{tx.label}</div>
+          <div style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 2 }}>
+            {tx.time}　·　{tx.note || '一般支出'}
+          </div>
+        </div>
+        <div style={{
+          fontSize: 16, fontWeight: 700,
+          color: tx.amt > 0 ? '#3B8A5C' : 'var(--ink)',
+          fontVariantNumeric: 'tabular-nums'
+        }}>
+          {tx.amt > 0 ? '+' : '−'}${Math.abs(tx.amt)}
         </div>
       </div>
-      <div style={{
-        fontSize: 16, fontWeight: 700,
-        color: tx.amt > 0 ? '#3B8A5C' : 'var(--ink)',
-        fontVariantNumeric: 'tabular-nums'
-      }}>
-        {tx.amt > 0 ? '+' : '−'}${Math.abs(tx.amt)}
-      </div>
-    </div>);
-
+      {expanded && (
+        <div style={{
+          display: 'flex', gap: 8, padding: '0 16px 12px',
+          borderBottom: isLast ? 'none' : '1px dashed #F5E5DC',
+        }}>
+          {onDelete && (
+            <div className="tap" onClick={() => { onDelete(tx.id); setExpanded(false); }} style={{
+              flex: 1, padding: '8px', borderRadius: 12,
+              background: 'var(--accent-faint)', textAlign: 'center',
+              fontSize: 13, color: 'var(--accent)', fontWeight: 600,
+            }}>🗑 刪除這筆</div>
+          )}
+          <div className="tap" onClick={() => setExpanded(false)} style={{
+            padding: '8px 16px', borderRadius: 12,
+            background: '#f5f5f5', textAlign: 'center',
+            fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600,
+          }}>取消</div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 Object.assign(window, { ScreenHeader, HomeScreen, TxRow });
