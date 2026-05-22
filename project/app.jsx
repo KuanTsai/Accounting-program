@@ -268,22 +268,16 @@ function App() {
     }
   };
 
-  const isMobile = window.matchMedia('(max-width: 600px)').matches;
-  const appShell = (
-    <div data-screen-label="App" className="paper-bg" style={isMobile ? {
+  return (
+    <div data-screen-label="App" className="paper-bg" style={{
       position: 'fixed', inset: 0, overflow: 'hidden',
       display: 'flex', flexDirection: 'column',
-    } : {
-      height: '100%', position: 'relative', overflow: 'hidden',
     }}>
-      <div style={{ height: isMobile ? 'env(safe-area-inset-top, 44px)' : '54px', flexShrink: 0 }}/>
-      <div style={isMobile
-        ? { flex: 1, overflowY: 'auto', paddingBottom: 100 }
-        : { height: 'calc(100% - 54px)', overflowY: 'auto' }
-      } data-screen-label={tab}>
+      <div style={{ height: 'env(safe-area-inset-top, 0px)', flexShrink: 0 }}/>
+      <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 100 }} data-screen-label={tab}>
         {renderScreen()}
       </div>
-      <BottomNav current={tab} onSelect={setTab} onAdd={handleAdd} isMobile={isMobile}/>
+      <BottomNav current={tab} onSelect={setTab} onAdd={handleAdd} isMobile={true}/>
         <AddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={handleSaved}/>
         {budgetOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
@@ -352,26 +346,6 @@ function App() {
         )}
         <Toast show={toast} withDiary={toastDiary}/>
       </div>
-  );
-  if (isMobile) return appShell;
-  return (
-    <IOSDevice width={402} height={874}>
-      {appShell}
-      {/* Tweaks panel */}
-      {window.TweaksPanel && (
-        <TweaksPanel title="Tweaks">
-          <TweakSection label="色系">
-            <PaletteRadio value={tweaks.palette} onChange={v => setTweak('palette', v)}/>
-          </TweakSection>
-          <TweakSection label="重新體驗">
-            <TweakButton onClick={() => {
-              try { localStorage.removeItem('onboardingDone'); } catch {}
-              setShowOnboarding(true);
-            }}>重跑 Onboarding</TweakButton>
-          </TweakSection>
-        </TweaksPanel>
-      )}
-    </IOSDevice>
   );
 }
 
