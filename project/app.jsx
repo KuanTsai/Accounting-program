@@ -253,6 +253,32 @@ function PaletteRadio({ value, onChange }) {
   );
 }
 
+// ─── palette bottom sheet ──────────────────────────────
+function PaletteSheet({ value, onChange, onClose }) {
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.18)' }} onClick={onClose}>
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        background: 'var(--card)',
+        borderRadius: '28px 28px 0 0',
+        padding: '20px 24px',
+        paddingBottom: 'max(24px, env(safe-area-inset-bottom, 24px))',
+        animation: 'slide-up 0.3s ease-out',
+        boxShadow: '0 -8px 30px rgba(0,0,0,0.08)',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ width: 36, height: 4, background: 'var(--ink-faint)', borderRadius: 2, margin: '0 auto 20px' }} />
+        <div className="hand" style={{ fontSize: 24, color: 'var(--ink)', marginBottom: 16 }}>選擇主題色 ✿</div>
+        <PaletteRadio value={value} onChange={onChange} />
+        <div className="tap" onClick={onClose} style={{
+          marginTop: 20, padding: '13px', borderRadius: 16,
+          background: 'var(--accent-faint)', textAlign: 'center',
+          fontSize: 15, color: 'var(--accent)', fontWeight: 700,
+        }}>完成</div>
+      </div>
+    </div>
+  );
+}
+
 // ─── streak calculator ─────────────────────────────────
 function calculateStreak(transactions) {
   const dateSet = new Set(
@@ -288,6 +314,7 @@ function App() {
   const [depositPot, setDepositPot] = useStateApp(null);
   const [categoriesOpen, setCategoriesOpen] = useStateApp(false);
   const [foxOpen, setFoxOpen] = useStateApp(false);
+  const [paletteOpen, setPaletteOpen] = useStateApp(false);
 
   const [showOnboarding, setShowOnboarding] = useStateApp(false);
   const [profileChecking, setProfileChecking] = useStateApp(true);
@@ -510,7 +537,7 @@ function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} budgetItems={budgetItems} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
+      case 'home': return <HomeScreen data={liveData} budgetItems={budgetItems} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions}/>;
       case 'diary': return <DiaryScreen transactions={transactions}/>;
       case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} foxState={foxState} transactions={transactions} budgetItems={budgetItems} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
@@ -621,6 +648,13 @@ function App() {
               goalPots={goalPots}
             />
           </div>
+        )}
+        {paletteOpen && (
+          <PaletteSheet
+            value={tweaks.palette}
+            onChange={(id) => setTweak('palette', id)}
+            onClose={() => setPaletteOpen(false)}
+          />
         )}
         <Toast show={toast} withDiary={toastDiary} streak={liveData.streak} expGain={toastExpGain} isFirstToday={toastFirstToday}/>
         {levelUpInfo && <LevelUpOverlay info={levelUpInfo} foxState={foxState} onClose={() => { setLevelUpInfo(null); setFoxMood('happy'); }}/>}

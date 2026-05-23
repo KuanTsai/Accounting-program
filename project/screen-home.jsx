@@ -30,7 +30,7 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // ─────────────────────────────────────────────────────────────
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
-function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, showCloseBanner = true, budgetItems = [] }) {
+function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onOpenPalette, showCloseBanner = true, budgetItems = [] }) {
   const { balance, income, expense, recent, streak, level, foxExp = 0, foxName, foxFur = 'orange', foxAccessory = 'none' } = data;
   const monthLabel = `${new Date().getMonth() + 1}月`;
 
@@ -41,7 +41,7 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
         subtitle="Today is a lovely day ✿"
         right={
         <div style={{ display: 'flex', gap: 8 }}>
-            <div className="tap" style={{
+            <div className="tap" onClick={onOpenPalette} style={{
             width: 38, height: 38, borderRadius: 12,
             background: 'var(--card)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: 'var(--shadow-sm)'
