@@ -23,7 +23,7 @@ function Fox({ mood = 'happy', size = 120, fur = 'orange', accessory = 'none' })
 
 function FoxMini({ size = 28 }) {
   return (
-    <img src="icons/icon-192.png" width={size} height={size} draggable={false}
+    <img src="icons/fox-mini.png" width={size} height={size} draggable={false}
       style={{ objectFit: 'contain', display: 'block', flexShrink: 0 }}/>
   );
 }
