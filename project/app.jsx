@@ -504,7 +504,7 @@ function App() {
         )}
         {categoriesOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
-            <CategoryScreen onClose={() => setCategoriesOpen(false)}/>
+            <CategoryScreen onClose={() => setCategoriesOpen(false)} transactions={transactions}/>
           </div>
         )}
         {foxOpen && (
