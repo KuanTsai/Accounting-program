@@ -246,7 +246,7 @@ function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox,
           {[
             { id: 'theme',   label: '主題色',       value: PALETTE_LABELS[palette] || '櫻花',  color: '#EEE8FF', icon: 'beauty', onClick: onOpenPalette },
             { id: 'cat',     label: '分類管理',     value: '管理分類',                         color: '#FFE5EC', icon: 'shop',   onClick: onOpenCategories },
-            { id: 'budget',  label: '預算管理',     value: budgetTotal > 0 ? `$${budgetTotal.toLocaleString()}` : '未設定', color: '#E2F4E8', icon: 'salary', onClick: onOpenBudget },
+            { id: 'budget',  label: '預算管理',     value: budgetTotal > 0 ? `信封 $${budgetTotal.toLocaleString()}` : '未設定', color: '#E2F4E8', icon: 'salary', onClick: onOpenBudget },
             { id: 'vault',   label: '我的金庫',     value: `NT$${vaultTotal.toLocaleString()}`, color: '#FFF4D1', icon: 'travel', onClick: onOpenVault },
             { id: 'fox',     label: '狐狸狀態',     value: `Lv.${foxState.level || 1} · ${foxState.name || '小桃'}`, color: '#FFE0EE', icon: 'beauty', onClick: onOpenFox },
           ].map((s, i, arr) => (

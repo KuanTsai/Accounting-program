@@ -116,6 +116,9 @@ function BudgetScreen({ onClose, transactions = [] }) {
                   monthly budget ✿
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 2 }}>本月總預算</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 3, lineHeight: 1.4 }}>
+                  信封預算：每個分類都有自己的額度，<br/>月底沒花完的錢自動存進金庫 ✿
+                </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 6 }}>
                   <span style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 600 }}>NT$</span>
                   <span style={{ fontSize: 34, color: 'var(--ink)', fontWeight: 700, letterSpacing: -0.3 }}>

@@ -165,6 +165,9 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
                 <div className="hand" style={{ fontSize: 17, color: 'var(--ink)', lineHeight: 1.35 }}>
                   {closeMonthLabel}過完啦！<br/>來看看你存了多少 ✿
                 </div>
+                <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 6, lineHeight: 1.5 }}>
+                  每個信封沒花完的錢，現在幫你存進金庫 🌸
+                </div>
               </div>
             </div>
             <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
