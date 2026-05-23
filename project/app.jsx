@@ -438,7 +438,7 @@ function App() {
       case 'home': return <HomeScreen data={liveData} budgetItems={budgetItems} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions}/>;
       case 'diary': return <DiaryScreen transactions={transactions}/>;
-      case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} foxState={foxState}/>;
+      case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} foxState={foxState} transactions={transactions} budgetItems={budgetItems} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
       default: return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd}/>;
     }
   };
