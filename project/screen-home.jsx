@@ -31,8 +31,15 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
 function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onOpenPalette, onOpenSettings, showCloseBanner = true, budgetItems = [] }) {
+  const isNearMonthEnd = (() => {
+    const d = new Date();
+    const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
+    return lastDay - d.getDate() < 5;
+  })();
   const { balance, income, expense, recent, streak, level, foxExp = 0, foxName, foxFur = 'orange', foxAccessory = 'none' } = data;
-  const monthLabel = `${new Date().getMonth() + 1}月`;
+  const _now = new Date();
+  const monthLabel = `${_now.getMonth() + 1}月`;
+  const todayLabel = `${_now.getMonth() + 1}/${_now.getDate()}`;
 
   return (
     <div style={{ paddingBottom: 100 }}>
@@ -66,7 +73,7 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
       
 
       {/* month-end ceremony banner */}
-      {showCloseBanner && (
+      {showCloseBanner && isNearMonthEnd && (
         <div style={{ padding: '4px 20px 0' }}>
           <div className="tap" onClick={onOpenClose} style={{
             background: 'linear-gradient(135deg, #FFF1E8 0%, #FFE5D4 100%)',
@@ -150,7 +157,7 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
               {monthLabel}結餘
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--ink-faint)' }}>
-              <span className="hand-en">May 21</span>
+              <span className="hand-en">{todayLabel}</span>
             </div>
           </div>
 

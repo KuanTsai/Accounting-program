@@ -2,24 +2,6 @@
 
 const { useState: useStateApp, useEffect: useEffectApp } = React;
 
-// ─── data ──────────────────────────────────────────────
-const SEED_DATA = {
-  balance: 28450,
-  income: 38000,
-  expense: 14800,
-  streak: 12,
-  level: 8,
-  foxName: '小桃',
-  recent: [
-    { cat: 'drink', label: '櫻花拿鐵', amt: -280, time: '今天 14:30', note: '車站旁新咖啡廳' },
-    { cat: 'food', label: '便利商店便當', amt: -110, time: '今天 12:15', note: '加班晚餐 QQ' },
-    { cat: 'transport', label: '捷運', amt: -30, time: '今天 08:42', note: null },
-    { cat: 'salary', label: '本月薪水', amt: 38000, time: '昨天', note: '5月入帳' },
-    { cat: 'shop', label: 'Uniqlo T恤', amt: -590, time: '昨天 19:20', note: '夏季新款' },
-    { cat: 'food', label: '早午餐', amt: -320, time: '昨天 11:00', note: '和小芸' },
-  ],
-};
-
 // ─── bottom nav ────────────────────────────────────────
 function BottomNav({ current, onSelect, onAdd, isMobile }) {
   const tabs = [
@@ -385,7 +367,16 @@ function App() {
   const [toastExpGain, setToastExpGain] = useStateApp(10);
   const [toastFirstToday, setToastFirstToday] = useStateApp(false);
   const [levelUpInfo, setLevelUpInfo] = useStateApp(null);
-  const [foxMood, setFoxMood] = useStateApp('happy');
+  const [foxMoodOverride, setFoxMoodOverride] = useStateApp(null);
+
+  const foxMood = (() => {
+    if (foxMoodOverride) return foxMoodOverride;
+    const { energy = 80, moodScore = 80, satiety = 80 } = foxState;
+    if (energy < 20 || satiety < 20) return 'sleepy';
+    if (moodScore < 30) return 'sad';
+    if (moodScore >= 90 && energy >= 70) return 'excited';
+    return 'happy';
+  })();
   const [tweaks, setTweak] = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : [TWEAK_DEFAULTS, () => {}];
   const [user, setUser] = useStateApp(null);
   const [authReady, setAuthReady] = useStateApp(false);
@@ -490,7 +481,7 @@ function App() {
   };
 
   const handleSaved = async (payload) => {
-    setFoxMood('celebrate');
+    setFoxMoodOverride('celebrate');
 
     // EXP calculation with bonuses
     let expGain = (payload && payload.diary) ? 18 : 10;
@@ -509,7 +500,7 @@ function App() {
     setToastFirstToday(isFirstToday);
     setToast(true);
     setToastDiary(!!(payload && payload.diary));
-    setTimeout(() => { setToast(false); setFoxMood('happy'); }, 2500);
+    setTimeout(() => { setToast(false); setFoxMoodOverride(null); }, 2500);
 
     if (user && payload) {
       const raw = parseFloat(payload.amount) || 0;
@@ -712,7 +703,7 @@ function App() {
           />
         )}
         <Toast show={toast} withDiary={toastDiary} streak={liveData.streak} expGain={toastExpGain} isFirstToday={toastFirstToday}/>
-        {levelUpInfo && <LevelUpOverlay info={levelUpInfo} foxState={foxState} onClose={() => { setLevelUpInfo(null); setFoxMood('happy'); }}/>}
+        {levelUpInfo && <LevelUpOverlay info={levelUpInfo} foxState={foxState} onClose={() => { setLevelUpInfo(null); setFoxMoodOverride(null); }}/>}
       </div>
   );
 }

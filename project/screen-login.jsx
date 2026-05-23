@@ -30,7 +30,7 @@ function LoginScreen() {
         boxShadow: '0 12px 32px rgba(255,143,171,0.4)',
         marginBottom: 28, overflow: 'hidden',
       }}>
-        <img src="project/assets/fox/fox_orange_happy.png" width="80" height="80"
+        <img src="icons/icon-192.png" width="80" height="80"
           style={{ objectFit: 'contain' }} draggable={false}/>
       </div>
 
