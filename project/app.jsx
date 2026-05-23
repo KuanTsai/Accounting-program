@@ -264,6 +264,7 @@ function App() {
   const [goalPots, setGoalPots] = useStateApp([]);
   const [autoPots, setAutoPots] = useStateApp([]);
   const [monthClosed, setMonthClosed] = useStateApp(false);
+  const [budgetItems, setBudgetItems] = useStateApp([]);
 
   // apply palette
   useEffectApp(() => {
@@ -313,6 +314,15 @@ function App() {
     const unsubAuto = window.db.collection('users').doc(uid).collection('autopots')
       .onSnapshot(snap => setAutoPots(snap.docs.map(d => ({ id: d.id, ...d.data() }))));
     return () => { unsubGoals(); unsubAuto(); };
+  }, [user]);
+
+  // budget subscription (feeds quick actions on home screen)
+  useEffectApp(() => {
+    if (!user) { setBudgetItems([]); return; }
+    return window.db.collection('users').doc(user.uid).collection('settings').doc('budget')
+      .onSnapshot(doc => {
+        setBudgetItems(doc.exists && doc.data().items ? doc.data().items : []);
+      });
   }, [user]);
 
   // Track whether current month is already closed
@@ -425,7 +435,7 @@ function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
+      case 'home': return <HomeScreen data={liveData} budgetItems={budgetItems} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions}/>;
       case 'diary': return <DiaryScreen transactions={transactions}/>;
       case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} foxState={foxState}/>;

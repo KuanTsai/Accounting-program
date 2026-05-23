@@ -30,7 +30,7 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // ─────────────────────────────────────────────────────────────
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
-function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, showCloseBanner = true }) {
+function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, showCloseBanner = true, budgetItems = [] }) {
   const { balance, income, expense, recent, streak, level, foxExp = 0, foxName, foxFur = 'orange', foxAccessory = 'none' } = data;
   const monthLabel = `${new Date().getMonth() + 1}月`;
 
@@ -189,24 +189,29 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
           <span style={{ fontSize: 11, color: 'var(--ink-faint)', fontFamily: 'Caveat', fontWeight: 600 }}>tap to add ♥</span>
         </div>
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-          {[
-          { id: 'drink', label: '手搖飲', amt: 65 },
-          { id: 'food', label: '便當', amt: 120 },
-          { id: 'transport', label: '捷運', amt: 30 },
-          { id: 'shop', label: '便利商店', amt: 45 },
-          { id: 'fun', label: '電影', amt: 320 }].
-          map((q, i) =>
-          <div key={i} className="tap pop-in" onClick={onAdd} style={{
-            flexShrink: 0, background: 'var(--card)', borderRadius: 18,
-            padding: '10px 12px 12px', minWidth: 92,
-            boxShadow: 'var(--shadow-sm)',
-            border: '1px solid #F5E8E0'
-          }}>
-              <CatBubble id={q.id} size={36} />
-              <div style={{ fontSize: 12, color: 'var(--ink)', marginTop: 6, fontWeight: 500 }}>{q.label}</div>
-              <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 1 }}>${q.amt}</div>
-            </div>
-          )}
+          {(budgetItems.filter(b => b.on).length > 0
+            ? budgetItems.filter(b => b.on).slice(0, 5)
+            : [
+                { id: 'drink', total: null }, { id: 'food', total: null },
+                { id: 'transport', total: null }, { id: 'shop', total: null }, { id: 'fun', total: null },
+              ]
+          ).map((q, i) => {
+            const cat = CATEGORIES.find(c => c.id === q.id) || { label: q.id };
+            return (
+              <div key={i} className="tap pop-in" onClick={onAdd} style={{
+                flexShrink: 0, background: 'var(--card)', borderRadius: 18,
+                padding: '10px 12px 12px', minWidth: 92,
+                boxShadow: 'var(--shadow-sm)',
+                border: '1px solid #F5E8E0'
+              }}>
+                <CatBubble id={q.id} size={36} />
+                <div style={{ fontSize: 12, color: 'var(--ink)', marginTop: 6, fontWeight: 500 }}>{cat.label}</div>
+                {q.total != null && (
+                  <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 1 }}>預算 ${q.total.toLocaleString()}</div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
 

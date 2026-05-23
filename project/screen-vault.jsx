@@ -27,7 +27,7 @@ function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, goalPots = [],
           </svg>
         </div>
         <div className="hand" style={{ fontSize: 24, color: 'var(--ink)' }}>我的金庫</div>
-        <div className="tap" style={{
+        <div className="tap" onClick={onAddGoal} style={{
           width: 36, height: 36, borderRadius: 12, background: '#fff',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: 'var(--shadow-sm)',
