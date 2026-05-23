@@ -543,6 +543,19 @@ function App() {
     });
   }, []);
 
+  // categories subscription — keeps global CATEGORIES in sync
+  useEffectApp(() => {
+    if (!user) return;
+    window.db.collection('users').doc(user.uid).collection('settings').doc('categories').get()
+      .then(doc => {
+        if (doc.exists && doc.data().cats && doc.data().cats.length > 0) {
+          const updated = doc.data().cats.filter(c => c.on !== false).map(({ id, label, color, bg }) => ({ id, label, color, bg }));
+          CATEGORIES.splice(0, CATEGORIES.length, ...updated);
+        }
+      })
+      .catch(() => {});
+  }, [user]);
+
   // transactions subscription
   useEffectApp(() => {
     if (!user) { setTransactions([]); return; }

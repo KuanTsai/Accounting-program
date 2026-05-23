@@ -1,9 +1,14 @@
 // Category management — list + reorder + per-category edit sheet
 
-const { useState: useStateCat } = React;
+const { useState: useStateCat, useEffect: useEffectCat } = React;
+
+const DEFAULT_CATS = () => CATEGORIES.map(c => ({
+  ...c,
+  on: true,
+  type: c.id === 'salary' ? 'income' : 'expense',
+}));
 
 function CategoryScreen({ onClose, transactions = [] }) {
-  // Count this month's transactions per category
   const now = new Date();
   const catCount = {};
   transactions.forEach(tx => {
@@ -14,12 +19,37 @@ function CategoryScreen({ onClose, transactions = [] }) {
     }
   });
 
-  const [cats, setCats] = useStateCat(() => CATEGORIES.map(c => ({
-    ...c,
-    on: true,
-    type: c.id === 'salary' ? 'income' : 'expense',
-  })));
+  const [cats, setCats] = useStateCat(DEFAULT_CATS);
   const [editingIdx, setEditingIdx] = useStateCat(null);
+  const [saving, setSaving] = useStateCat(false);
+
+  // Load from Firestore on mount
+  useEffectCat(() => {
+    const uid = window.auth.currentUser?.uid;
+    if (!uid) return;
+    window.db.collection('users').doc(uid).collection('settings').doc('categories').get()
+      .then(doc => {
+        if (doc.exists && doc.data().cats && doc.data().cats.length > 0) {
+          setCats(doc.data().cats);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const uid = window.auth.currentUser?.uid;
+    if (uid) {
+      try {
+        await window.db.collection('users').doc(uid).collection('settings').doc('categories').set({ cats });
+      } catch(e) {}
+    }
+    // Sync global CATEGORIES in-place so every other screen sees the update
+    const updated = cats.filter(c => c.on !== false).map(({ id, label, color, bg }) => ({ id, label, color, bg }));
+    CATEGORIES.splice(0, CATEGORIES.length, ...updated);
+    setSaving(false);
+    onClose();
+  };
 
   const expense = cats.filter(c => c.type === 'expense');
   const income  = cats.filter(c => c.type === 'income');
@@ -50,7 +80,10 @@ function CategoryScreen({ onClose, transactions = [] }) {
           </svg>
         </div>
         <div className="hand" style={{ fontSize: 24, color: 'var(--ink)' }}>分類管理</div>
-        <div style={{ width: 36 }}/>
+        <div className="tap" onClick={handleSave} style={{
+          padding: '6px 14px', borderRadius: 999, background: 'var(--accent)',
+          color: '#fff', fontSize: 13, fontWeight: 600,
+        }}>{saving ? '儲存中…' : '儲存'}</div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 40 }}>
