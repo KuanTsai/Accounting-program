@@ -23,16 +23,8 @@ function LoginScreen() {
       padding: '40px 32px',
     }}>
       {/* logo area */}
-      <div style={{
-        width: 100, height: 100, borderRadius: 32,
-        background: 'linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%)',
-        display: 'flex', alignItems: 'center', justifyContent: 'center',
-        boxShadow: '0 12px 32px rgba(255,143,171,0.4)',
-        marginBottom: 28, overflow: 'hidden',
-      }}>
-        <img src="icons/icon-192.png" width="80" height="80"
-          style={{ objectFit: 'contain' }} draggable={false}/>
-      </div>
+      <img src="icons/icon-192.png" width="100" height="100"
+        style={{ objectFit: 'contain', marginBottom: 28 }} draggable={false}/>
 
       <div style={{ textAlign: 'center', marginBottom: 48 }}>
         <div className="hand" style={{ fontSize: 30, color: 'var(--ink)', lineHeight: 1.3 }}>
