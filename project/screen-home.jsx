@@ -30,7 +30,7 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // ─────────────────────────────────────────────────────────────
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
-function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onOpenPalette, showCloseBanner = true, budgetItems = [] }) {
+function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onOpenPalette, onOpenSettings, showCloseBanner = true, budgetItems = [] }) {
   const { balance, income, expense, recent, streak, level, foxExp = 0, foxName, foxFur = 'orange', foxAccessory = 'none' } = data;
   const monthLabel = `${new Date().getMonth() + 1}月`;
 
@@ -51,19 +51,15 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
                 <path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.07 7.07l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.07-7.07l4.24-4.24" />
               </svg>
             </div>
-            <div className="tap" style={{
+            <div className="tap" onClick={onOpenSettings} style={{
             width: 38, height: 38, borderRadius: 12,
             background: 'var(--card)', display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: 'var(--shadow-sm)'
           }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2">
-                <path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" />
-                <path d="M13.7 21a2 2 0 0 1-3.4 0" />
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
               </svg>
-              <span style={{
-              position: 'absolute', marginLeft: 14, marginTop: -14,
-              width: 8, height: 8, borderRadius: 4, background: 'var(--accent)'
-            }} />
             </div>
           </div>
         } />
