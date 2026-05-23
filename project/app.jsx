@@ -2,24 +2,6 @@
 
 const { useState: useStateApp, useEffect: useEffectApp } = React;
 
-// ─── data ──────────────────────────────────────────────
-const SEED_DATA = {
-  balance: 28450,
-  income: 38000,
-  expense: 14800,
-  streak: 12,
-  level: 8,
-  foxName: '小桃',
-  recent: [
-    { cat: 'drink', label: '櫻花拿鐵', amt: -280, time: '今天 14:30', note: '車站旁新咖啡廳' },
-    { cat: 'food', label: '便利商店便當', amt: -110, time: '今天 12:15', note: '加班晚餐 QQ' },
-    { cat: 'transport', label: '捷運', amt: -30, time: '今天 08:42', note: null },
-    { cat: 'salary', label: '本月薪水', amt: 38000, time: '昨天', note: '5月入帳' },
-    { cat: 'shop', label: 'Uniqlo T恤', amt: -590, time: '昨天 19:20', note: '夏季新款' },
-    { cat: 'food', label: '早午餐', amt: -320, time: '昨天 11:00', note: '和小芸' },
-  ],
-};
-
 // ─── bottom nav ────────────────────────────────────────
 function BottomNav({ current, onSelect, onAdd, isMobile }) {
   const tabs = [
@@ -253,6 +235,76 @@ function PaletteRadio({ value, onChange }) {
   );
 }
 
+// ─── settings bottom sheet ─────────────────────────────
+function SettingsSheet({ user, onLogout, onClose }) {
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.18)' }} onClick={onClose}>
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        background: 'var(--card)',
+        borderRadius: '28px 28px 0 0',
+        padding: '20px 24px',
+        paddingBottom: 'max(24px, env(safe-area-inset-bottom, 24px))',
+        animation: 'slide-up 0.3s ease-out',
+        boxShadow: '0 -8px 30px rgba(0,0,0,0.08)',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ width: 36, height: 4, background: 'var(--ink-faint)', borderRadius: 2, margin: '0 auto 20px' }} />
+        <div className="hand" style={{ fontSize: 24, color: 'var(--ink)', marginBottom: 20 }}>設定 ✿</div>
+
+        <div style={{ background: 'var(--bg-paper)', borderRadius: 18, overflow: 'hidden', marginBottom: 12 }}>
+          <div style={{ padding: '14px 16px', borderBottom: '1px dashed var(--accent-faint)' }}>
+            <div style={{ fontSize: 11, color: 'var(--ink-faint)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 3 }}>登入帳號</div>
+            <div style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 500 }}>{user?.email || '未登入'}</div>
+          </div>
+          <div className="tap" onClick={onLogout} style={{
+            padding: '15px 16px',
+            display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          }}>
+            <span style={{ fontSize: 15, color: '#E05A5A', fontWeight: 600 }}>登出</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#E05A5A" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </div>
+        </div>
+
+        <div className="tap" onClick={onClose} style={{
+          marginTop: 8, padding: '13px', borderRadius: 16,
+          background: 'var(--accent-faint)', textAlign: 'center',
+          fontSize: 15, color: 'var(--accent)', fontWeight: 700,
+        }}>關閉</div>
+      </div>
+    </div>
+  );
+}
+
+// ─── palette bottom sheet ──────────────────────────────
+function PaletteSheet({ value, onChange, onClose }) {
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.18)' }} onClick={onClose}>
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        background: 'var(--card)',
+        borderRadius: '28px 28px 0 0',
+        padding: '20px 24px',
+        paddingBottom: 'max(24px, env(safe-area-inset-bottom, 24px))',
+        animation: 'slide-up 0.3s ease-out',
+        boxShadow: '0 -8px 30px rgba(0,0,0,0.08)',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ width: 36, height: 4, background: 'var(--ink-faint)', borderRadius: 2, margin: '0 auto 20px' }} />
+        <div className="hand" style={{ fontSize: 24, color: 'var(--ink)', marginBottom: 16 }}>選擇主題色 ✿</div>
+        <PaletteRadio value={value} onChange={onChange} />
+        <div className="tap" onClick={onClose} style={{
+          marginTop: 20, padding: '13px', borderRadius: 16,
+          background: 'var(--accent-faint)', textAlign: 'center',
+          fontSize: 15, color: 'var(--accent)', fontWeight: 700,
+        }}>完成</div>
+      </div>
+    </div>
+  );
+}
+
 // ─── streak calculator ─────────────────────────────────
 function calculateStreak(transactions) {
   const dateSet = new Set(
@@ -288,6 +340,8 @@ function App() {
   const [depositPot, setDepositPot] = useStateApp(null);
   const [categoriesOpen, setCategoriesOpen] = useStateApp(false);
   const [foxOpen, setFoxOpen] = useStateApp(false);
+  const [paletteOpen, setPaletteOpen] = useStateApp(false);
+  const [settingsOpen, setSettingsOpen] = useStateApp(false);
 
   const [showOnboarding, setShowOnboarding] = useStateApp(false);
   const [profileChecking, setProfileChecking] = useStateApp(true);
@@ -313,7 +367,16 @@ function App() {
   const [toastExpGain, setToastExpGain] = useStateApp(10);
   const [toastFirstToday, setToastFirstToday] = useStateApp(false);
   const [levelUpInfo, setLevelUpInfo] = useStateApp(null);
-  const [foxMood, setFoxMood] = useStateApp('happy');
+  const [foxMoodOverride, setFoxMoodOverride] = useStateApp(null);
+
+  const foxMood = (() => {
+    if (foxMoodOverride) return foxMoodOverride;
+    const { energy = 80, moodScore = 80, satiety = 80 } = foxState;
+    if (energy < 20 || satiety < 20) return 'sleepy';
+    if (moodScore < 30) return 'sad';
+    if (moodScore >= 90 && energy >= 70) return 'excited';
+    return 'happy';
+  })();
   const [tweaks, setTweak] = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : [TWEAK_DEFAULTS, () => {}];
   const [user, setUser] = useStateApp(null);
   const [authReady, setAuthReady] = useStateApp(false);
@@ -392,6 +455,13 @@ function App() {
   }, [user]);
 
   const handleAdd = () => setAddOpen(true);
+  const handleLogout = async () => {
+    try {
+      await window.auth.signOut();
+      localStorage.removeItem('onboardingDone');
+    } catch (e) {}
+    setSettingsOpen(false);
+  };
   const handleDelete = async (txId) => {
     if (!user || !txId) return;
     await window.db.collection('users').doc(user.uid).collection('transactions').doc(txId).delete();
@@ -411,7 +481,7 @@ function App() {
   };
 
   const handleSaved = async (payload) => {
-    setFoxMood('celebrate');
+    setFoxMoodOverride('celebrate');
 
     // EXP calculation with bonuses
     let expGain = (payload && payload.diary) ? 18 : 10;
@@ -430,7 +500,7 @@ function App() {
     setToastFirstToday(isFirstToday);
     setToast(true);
     setToastDiary(!!(payload && payload.diary));
-    setTimeout(() => { setToast(false); setFoxMood('happy'); }, 2500);
+    setTimeout(() => { setToast(false); setFoxMoodOverride(null); }, 2500);
 
     if (user && payload) {
       const raw = parseFloat(payload.amount) || 0;
@@ -510,10 +580,10 @@ function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} budgetItems={budgetItems} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
+      case 'home': return <HomeScreen data={liveData} budgetItems={budgetItems} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions}/>;
       case 'diary': return <DiaryScreen transactions={transactions}/>;
-      case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} foxState={foxState} transactions={transactions} budgetItems={budgetItems} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
+      case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} palette={tweaks.palette} foxState={foxState} transactions={transactions} budgetItems={budgetItems} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
       default: return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd}/>;
     }
   };
@@ -586,7 +656,7 @@ function App() {
         )}
         {foxOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
-            <FoxScreen foxState={foxState} setFoxState={setFoxState} onClose={() => setFoxOpen(false)} onExpGain={gainExp}/>
+            <FoxScreen foxState={foxState} setFoxState={setFoxState} onClose={() => setFoxOpen(false)} onExpGain={gainExp} transactions={transactions} streak={liveData.streak}/>
           </div>
         )}
         {showOnboarding && (
@@ -622,8 +692,18 @@ function App() {
             />
           </div>
         )}
+        {settingsOpen && (
+          <SettingsSheet user={user} onLogout={handleLogout} onClose={() => setSettingsOpen(false)} />
+        )}
+        {paletteOpen && (
+          <PaletteSheet
+            value={tweaks.palette}
+            onChange={(id) => setTweak('palette', id)}
+            onClose={() => setPaletteOpen(false)}
+          />
+        )}
         <Toast show={toast} withDiary={toastDiary} streak={liveData.streak} expGain={toastExpGain} isFirstToday={toastFirstToday}/>
-        {levelUpInfo && <LevelUpOverlay info={levelUpInfo} foxState={foxState} onClose={() => { setLevelUpInfo(null); setFoxMood('happy'); }}/>}
+        {levelUpInfo && <LevelUpOverlay info={levelUpInfo} foxState={foxState} onClose={() => { setLevelUpInfo(null); setFoxMoodOverride(null); }}/>}
       </div>
   );
 }
