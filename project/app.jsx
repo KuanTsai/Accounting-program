@@ -586,7 +586,7 @@ function App() {
         )}
         {foxOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
-            <FoxScreen foxState={foxState} setFoxState={setFoxState} onClose={() => setFoxOpen(false)} onExpGain={gainExp}/>
+            <FoxScreen foxState={foxState} setFoxState={setFoxState} onClose={() => setFoxOpen(false)} onExpGain={gainExp} transactions={transactions} streak={liveData.streak}/>
           </div>
         )}
         {showOnboarding && (

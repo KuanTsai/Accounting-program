@@ -19,7 +19,9 @@ const ACCESSORY_OPTIONS = [
   { id: 'crown',   label: '皇冠', unlock: 15 },
 ];
 
-function FoxScreen({ foxState, setFoxState, onClose, onExpGain }) {
+const DAILY_INTERACT_CAP = 15;
+
+function FoxScreen({ foxState, setFoxState, onClose, onExpGain, transactions = [], streak = 0 }) {
   const [editingName, setEditingName] = useStateFox(false);
   const [nameInput, setNameInput] = useStateFox(foxState.name);
   const [tab, setTab] = useStateFox('customize');
@@ -58,13 +60,27 @@ function FoxScreen({ foxState, setFoxState, onClose, onExpGain }) {
     saveProfile({ ...updates, lastUpdatedAt: now });
   };
 
+  // Returns how much EXP was actually granted (0 if daily cap reached)
+  const tryGainInteractExp = (amount) => {
+    const today = new Date().toDateString();
+    const usedToday = foxState.interactDate === today ? (foxState.interactExp || 0) : 0;
+    const remaining = DAILY_INTERACT_CAP - usedToday;
+    if (remaining <= 0) return 0;
+    const gain = Math.min(amount, remaining);
+    if (onExpGain) onExpGain(gain);
+    const newUsed = usedToday + gain;
+    setFoxState(s => ({ ...s, interactDate: today, interactExp: newUsed }));
+    saveProfile({ interactDate: today, interactExp: newUsed });
+    return gain;
+  };
+
   const feed = () => {
     const newSatiety = Math.min(100, (foxState.satiety || 80) + 25);
     const newMood = Math.min(100, (foxState.moodScore || 90) + 5);
     setFoxState(s => ({ ...s, mood: 'eating' }));
     saveStats({ satiety: newSatiety, moodScore: newMood });
-    showNote('飽足 +25　+3 EXP ♥', '#C5751F');
-    if (onExpGain) onExpGain(3);
+    const gained = tryGainInteractExp(3);
+    showNote(gained > 0 ? `飽足 +25　+${gained} EXP ♥` : '飽足 +25 ♥', '#C5751F');
     setTimeout(() => setFoxState(s => ({ ...s, mood: 'happy' })), 1500);
   };
 
@@ -73,8 +89,8 @@ function FoxScreen({ foxState, setFoxState, onClose, onExpGain }) {
     const newMood = Math.min(100, (foxState.moodScore || 90) + 18);
     setFoxState(s => ({ ...s, mood: 'excited' }));
     saveStats({ energy: newEnergy, moodScore: newMood });
-    showNote('心情 +18　+5 EXP ✿', 'var(--accent)');
-    if (onExpGain) onExpGain(5);
+    const gained = tryGainInteractExp(5);
+    showNote(gained > 0 ? `心情 +18　+${gained} EXP ✿` : '心情 +18 ✿', 'var(--accent)');
     setTimeout(() => setFoxState(s => ({ ...s, mood: 'happy' })), 1500);
   };
 
@@ -82,10 +98,37 @@ function FoxScreen({ foxState, setFoxState, onClose, onExpGain }) {
     const newEnergy = Math.min(100, (foxState.energy || 80) + 30);
     setFoxState(s => ({ ...s, mood: 'sleepy' }));
     saveStats({ energy: newEnergy });
-    showNote('活力 +30　+2 EXP zZ', 'var(--lavender)');
-    if (onExpGain) onExpGain(2);
+    const gained = tryGainInteractExp(2);
+    showNote(gained > 0 ? `活力 +30　+${gained} EXP zZ` : '活力 +30 zZ', 'var(--lavender)');
     setTimeout(() => setFoxState(s => ({ ...s, mood: 'happy' })), 2000);
   };
+
+  // Build real bond log from transactions
+  const bondLog = (() => {
+    const now = new Date();
+    const todayStr = now.toDateString();
+    const yesterdayStr = new Date(now - 86400000).toDateString();
+    const dayMap = {};
+    transactions.forEach(tx => {
+      if (!tx.createdAt) return;
+      const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
+      const key = d.toDateString();
+      if (!dayMap[key]) dayMap[key] = { date: d, txs: [] };
+      dayMap[key].txs.push(tx);
+    });
+    const events = [];
+    Object.values(dayMap).sort((a, b) => b.date - a.date).slice(0, 4).forEach(({ date, txs }) => {
+      const ds = date.toDateString();
+      const label = ds === todayStr ? '今天' : ds === yesterdayStr ? '昨天' : `${Math.round((now - date) / 86400000)} 天前`;
+      const hasDiary = txs.some(t => t.diary);
+      events.push(hasDiary
+        ? { date: label, text: `你寫了日記，${foxState.name || '小桃'}替你好好記下來 ✿`, color: '#C9B8F0' }
+        : { date: label, text: `${foxState.name || '小桃'}陪你記了 ${txs.length} 筆帳`, color: 'var(--accent)' }
+      );
+    });
+    if (streak >= 7) events.push({ date: `第 ${streak} 天`, text: '連續記帳，繼續保持 ✿', color: '#7DCBA8' });
+    return events;
+  })();
 
   return (
     <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
@@ -315,12 +358,11 @@ function FoxScreen({ foxState, setFoxState, onClose, onExpGain }) {
         <div style={{ padding: '20px 20px 0' }}>
           <div className="hand" style={{ fontSize: 20, color: 'var(--ink)', marginBottom: 10 }}>羈絆紀錄</div>
           <div style={{ background: 'var(--card)', borderRadius: 20, padding: 4, boxShadow: 'var(--shadow-sm)' }}>
-            {[
-              { date: '今天', text: `${foxState.name} 看著你記帳，心情變好了` , color: 'var(--accent)' },
-              { date: '昨天', text: '一起完成了 5 月結算 ✿', color: '#C5751F' },
-              { date: '3 天前', text: `升上 Lv.${foxState.level}！解鎖了新配件`, color: '#7DCBA8' },
-              { date: '一週前', text: '連續記帳 7 天，獲得徽章', color: '#7E6E94' },
-            ].map((it, i, arr) => (
+            {bondLog.length === 0
+              ? <div style={{ padding: '20px 14px', textAlign: 'center', fontSize: 13, color: 'var(--ink-faint)' }}>
+                  還沒有紀錄，開始記帳來建立羈絆吧 ✿
+                </div>
+              : bondLog.map((it, i, arr) => (
               <div key={i} style={{
                 display: 'flex', alignItems: 'flex-start', gap: 10,
                 padding: '10px 14px',
