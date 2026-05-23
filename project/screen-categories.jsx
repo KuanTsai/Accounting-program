@@ -50,16 +50,7 @@ function CategoryScreen({ onClose, transactions = [] }) {
           </svg>
         </div>
         <div className="hand" style={{ fontSize: 24, color: 'var(--ink)' }}>分類管理</div>
-        <div className="tap" onClick={() => setEditingIdx('new')} style={{
-          width: 36, height: 36, borderRadius: 12, background: 'var(--accent)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          boxShadow: '0 3px 8px rgba(255,143,171,0.35)',
-        }}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="12" y1="5" x2="12" y2="19"/>
-            <line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-        </div>
+        <div style={{ width: 36 }}/>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 40 }}>
@@ -80,19 +71,18 @@ function CategoryScreen({ onClose, transactions = [] }) {
         <div style={{ padding: '20px 20px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div className="hand" style={{ fontSize: 20, color: 'var(--ink)' }}>支出分類</div>
-            <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-              {expense.length} 個
-            </span>
+            <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{expense.length} 個</span>
           </div>
           <div style={{ background: 'var(--card)', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-            {expense.map((c, i) => {
+            {expense.map((c) => {
               const realIdx = cats.findIndex(x => x.id === c.id);
               return (
-                <CategoryRow key={c.id} cat={c} count={catCount[c.id] || 0} isLast={i === expense.length - 1}
+                <CategoryRow key={c.id} cat={c} count={catCount[c.id] || 0}
                   onTap={() => setEditingIdx(realIdx)}
                   onToggle={() => updateCat(realIdx, { on: !c.on })}/>
               );
             })}
+            <AddCatRow label="新增支出分類" onClick={() => setEditingIdx('new')}/>
           </div>
         </div>
 
@@ -100,33 +90,18 @@ function CategoryScreen({ onClose, transactions = [] }) {
         <div style={{ padding: '20px 20px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div className="hand" style={{ fontSize: 20, color: 'var(--ink)' }}>收入分類</div>
-            <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-              {income.length} 個
-            </span>
+            <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{income.length} 個</span>
           </div>
           <div style={{ background: 'var(--card)', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-            {income.map((c, i) => {
+            {income.map((c) => {
               const realIdx = cats.findIndex(x => x.id === c.id);
               return (
-                <CategoryRow key={c.id} cat={c} count={catCount[c.id] || 0} isLast={i === income.length - 1}
+                <CategoryRow key={c.id} cat={c} count={catCount[c.id] || 0}
                   onTap={() => setEditingIdx(realIdx)}
                   onToggle={() => updateCat(realIdx, { on: !c.on })}/>
               );
             })}
-            {/* add new income */}
-            <div className="tap" onClick={() => setEditingIdx('new-income')} style={{
-              display: 'flex', alignItems: 'center', padding: '12px 16px',
-              borderTop: '1px dashed #F5E5DC',
-              color: 'var(--accent)', fontSize: 14, fontWeight: 600,
-            }}>
-              <div style={{
-                width: 36, height: 36, borderRadius: 18,
-                background: 'var(--accent-faint)', marginRight: 12,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                fontSize: 18, fontWeight: 700,
-              }}>＋</div>
-              新增收入分類
-            </div>
+            <AddCatRow label="新增收入分類" onClick={() => setEditingIdx('new-income')}/>
           </div>
         </div>
       </div>
@@ -153,46 +128,35 @@ function CategoryScreen({ onClose, transactions = [] }) {
   );
 }
 
-function CategoryRow({ cat, count = 0, isLast, onTap, onToggle }) {
+function CategoryRow({ cat, count = 0, onTap, onToggle }) {
+  const iconId = cat.icon || cat.id;
+  const bg = cat.bg || '#FFE5EC';
+  const color = cat.color || '#FF8FAB';
   return (
     <div style={{
       display: 'flex', alignItems: 'center', padding: '10px 16px',
-      borderBottom: isLast ? 'none' : '1px dashed #F5E5DC',
+      borderBottom: '1px dashed #F5E5DC',
       opacity: cat.on ? 1 : 0.5,
     }}>
-      {/* drag handle */}
-      <svg width="10" height="14" viewBox="0 0 10 14" style={{ marginRight: 8, flexShrink: 0 }}>
-        <circle cx="2" cy="3" r="1" fill="#C4ADA5"/>
-        <circle cx="8" cy="3" r="1" fill="#C4ADA5"/>
-        <circle cx="2" cy="7" r="1" fill="#C4ADA5"/>
-        <circle cx="8" cy="7" r="1" fill="#C4ADA5"/>
-        <circle cx="2" cy="11" r="1" fill="#C4ADA5"/>
-        <circle cx="8" cy="11" r="1" fill="#C4ADA5"/>
-      </svg>
-
       <div className="tap" onClick={onTap} style={{
         flex: 1, display: 'flex', alignItems: 'center', gap: 12, minWidth: 0,
       }}>
-        <CatBubble id={cat.id} size={38}/>
+        <div style={{
+          width: 38, height: 38, borderRadius: 12, flexShrink: 0,
+          background: bg, display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <CatIcon id={iconId} size={22} color={color}/>
+        </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, color: 'var(--ink)', fontWeight: 600 }}>{cat.label}</div>
-          <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 2 }}>
-            本月 {count} 筆
-          </div>
+          <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 2 }}>本月 {count} 筆</div>
         </div>
       </div>
 
-      {/* color dot */}
-      <div style={{
-        width: 16, height: 16, borderRadius: 8, background: cat.color,
-        marginRight: 12,
-      }}/>
-
-      {/* on/off */}
       <div onClick={onToggle} className="tap" style={{
         width: 38, height: 22, borderRadius: 11,
         background: cat.on ? '#7DCBA8' : '#D5CCC4',
-        position: 'relative', transition: 'background 0.15s',
+        position: 'relative', transition: 'background 0.15s', flexShrink: 0,
       }}>
         <div style={{
           position: 'absolute', top: 2, left: cat.on ? 18 : 2,
@@ -200,6 +164,24 @@ function CategoryRow({ cat, count = 0, isLast, onTap, onToggle }) {
           boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 0.15s',
         }}/>
       </div>
+    </div>
+  );
+}
+
+function AddCatRow({ label, onClick }) {
+  return (
+    <div className="tap" onClick={onClick} style={{
+      display: 'flex', alignItems: 'center', padding: '12px 16px',
+      borderTop: '1px dashed #F5E5DC',
+      color: 'var(--accent)', fontSize: 14, fontWeight: 600,
+    }}>
+      <div style={{
+        width: 36, height: 36, borderRadius: 18,
+        background: 'var(--accent-faint)', marginRight: 12,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 18, fontWeight: 700,
+      }}>＋</div>
+      {label}
     </div>
   );
 }
