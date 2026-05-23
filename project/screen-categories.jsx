@@ -2,11 +2,21 @@
 
 const { useState: useStateCat } = React;
 
-function CategoryScreen({ onClose }) {
+function CategoryScreen({ onClose, transactions = [] }) {
+  // Count this month's transactions per category
+  const now = new Date();
+  const catCount = {};
+  transactions.forEach(tx => {
+    if (!tx.createdAt) return;
+    const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
+    if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) {
+      catCount[tx.cat] = (catCount[tx.cat] || 0) + 1;
+    }
+  });
+
   const [cats, setCats] = useStateCat(() => CATEGORIES.map(c => ({
     ...c,
     on: true,
-    count: Math.floor(Math.random() * 80) + 5, // mock usage count
     type: c.id === 'salary' ? 'income' : 'expense',
   })));
   const [editingIdx, setEditingIdx] = useStateCat(null);
@@ -78,7 +88,7 @@ function CategoryScreen({ onClose }) {
             {expense.map((c, i) => {
               const realIdx = cats.findIndex(x => x.id === c.id);
               return (
-                <CategoryRow key={c.id} cat={c} isLast={i === expense.length - 1}
+                <CategoryRow key={c.id} cat={c} count={catCount[c.id] || 0} isLast={i === expense.length - 1}
                   onTap={() => setEditingIdx(realIdx)}
                   onToggle={() => updateCat(realIdx, { on: !c.on })}/>
               );
@@ -98,7 +108,7 @@ function CategoryScreen({ onClose }) {
             {income.map((c, i) => {
               const realIdx = cats.findIndex(x => x.id === c.id);
               return (
-                <CategoryRow key={c.id} cat={c} isLast={i === income.length - 1}
+                <CategoryRow key={c.id} cat={c} count={catCount[c.id] || 0} isLast={i === income.length - 1}
                   onTap={() => setEditingIdx(realIdx)}
                   onToggle={() => updateCat(realIdx, { on: !c.on })}/>
               );
@@ -143,7 +153,7 @@ function CategoryScreen({ onClose }) {
   );
 }
 
-function CategoryRow({ cat, isLast, onTap, onToggle }) {
+function CategoryRow({ cat, count = 0, isLast, onTap, onToggle }) {
   return (
     <div style={{
       display: 'flex', alignItems: 'center', padding: '10px 16px',
@@ -167,7 +177,7 @@ function CategoryRow({ cat, isLast, onTap, onToggle }) {
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, color: 'var(--ink)', fontWeight: 600 }}>{cat.label}</div>
           <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 2 }}>
-            本月 {cat.count} 筆
+            本月 {count} 筆
           </div>
         </div>
       </div>
@@ -378,7 +388,7 @@ function CategoryEditSheet({ cat, isNew, defaultType, onClose, onSave, onDelete 
               刪除這個分類
             </div>
             <div style={{ fontSize: 10, color: 'var(--ink-faint)', textAlign: 'center', marginTop: 6 }}>
-              已使用 {cat?.count || 0} 筆 · 刪除後過去紀錄會保留
+              刪除後過去紀錄會保留
             </div>
           </div>
         )}

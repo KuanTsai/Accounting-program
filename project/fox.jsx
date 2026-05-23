@@ -6,8 +6,8 @@ function Fox({ mood = 'happy', size = 120, fur = 'orange', accessory = 'none' })
   const resolvedMood = VALID_MOODS.includes(mood) ? mood : 'happy';
   const resolvedFur  = VALID_FURS.includes(fur)   ? fur  : 'orange';
 
-  const foxSrc = `assets/fox/fox_${resolvedFur}_${resolvedMood}.png`;
-  const accSrc = accessory && accessory !== 'none' ? `assets/fox/acc_${accessory}.png` : null;
+  const foxSrc = `project/assets/fox/fox_${resolvedFur}_${resolvedMood}.png`;
+  const accSrc = accessory && accessory !== 'none' ? `project/assets/fox/acc_${accessory}.png` : null;
 
   return (
     <div style={{ position: 'relative', width: size, height: size, display: 'inline-block', flexShrink: 0 }}>

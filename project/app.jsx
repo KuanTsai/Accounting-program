@@ -105,9 +105,63 @@ function BottomNav({ current, onSelect, onAdd, isMobile }) {
   );
 }
 
+const LEVEL_UNLOCKS = { 3: '小花', 5: '圍巾', 8: '眼鏡', 15: '皇冠' };
+
+// ─── level-up full-screen overlay ──────────────────────
+function LevelUpOverlay({ info, foxState, onClose }) {
+  const unlocked = LEVEL_UNLOCKS[info.level];
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 95,
+      background: 'rgba(255,240,248,0.94)', backdropFilter: 'blur(14px)',
+      display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
+      animation: 'pop-in 0.4s ease-out',
+    }}>
+      <div className="sparkle" style={{ position: 'absolute', top: '12%', left: '18%', fontSize: 26, color: '#FFD66B' }}>✦</div>
+      <div className="sparkle" style={{ position: 'absolute', top: '18%', right: '16%', fontSize: 20, color: 'var(--accent)', animationDelay: '0.2s' }}>★</div>
+      <div className="sparkle" style={{ position: 'absolute', bottom: '22%', left: '14%', fontSize: 16, color: 'var(--secondary)', animationDelay: '0.5s' }}>✦</div>
+      <div className="sparkle" style={{ position: 'absolute', bottom: '28%', right: '18%', fontSize: 22, color: '#C9B8F0', animationDelay: '0.3s' }}>★</div>
+
+      <div className="wiggle">
+        <Fox mood="celebrate" size={160} fur={foxState.fur} accessory={foxState.accessory}/>
+      </div>
+      <div style={{ marginTop: 20, textAlign: 'center' }}>
+        <div style={{ fontSize: 13, color: 'var(--ink-soft)', fontFamily: 'Caveat', fontWeight: 700, letterSpacing: '0.08em' }}>
+          Level Up ✦
+        </div>
+        <div className="hand" style={{ fontSize: 52, color: 'var(--ink)', lineHeight: 1.1 }}>
+          Lv. {info.level}
+        </div>
+        <div style={{ fontSize: 16, color: 'var(--ink-soft)', marginTop: 6 }}>
+          {foxState.name || '小桃'} 升級了！
+        </div>
+        {unlocked && (
+          <div style={{
+            marginTop: 14, padding: '10px 22px', borderRadius: 999,
+            background: '#fff', boxShadow: 'var(--shadow-sm)',
+            fontSize: 14, color: 'var(--accent)', fontWeight: 700,
+            display: 'inline-block',
+          }}>
+            🎁 解鎖新配件：{unlocked}
+          </div>
+        )}
+      </div>
+      <div className="tap" onClick={onClose} style={{
+        marginTop: 34, padding: '14px 44px', borderRadius: 999,
+        background: 'linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%)',
+        color: '#fff', fontSize: 16, fontWeight: 700,
+        boxShadow: '0 8px 20px rgba(255,143,171,0.45)',
+      }}>
+        太棒了！繼續努力 ✿
+      </div>
+    </div>
+  );
+}
+
 // ─── celebration toast (after add) ─────────────────────
-function Toast({ show, withDiary, streak = 0 }) {
+function Toast({ show, withDiary, streak = 0, expGain = 10, isFirstToday = false }) {
   if (!show) return null;
+  const bonusNote = isFirstToday ? '　首筆 +5 ✦' : streak >= 7 ? `　連續 ${streak} 天加成` : '';
   return (
     <div style={{
       position: 'absolute', top: '40%', left: '50%',
@@ -129,7 +183,7 @@ function Toast({ show, withDiary, streak = 0 }) {
           {withDiary ? '記錄＋日記都完成！' : '你做得很棒！'}
         </div>
         <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4 }}>
-          {withDiary ? '+18 EXP　·　多了一篇日記 ✿' : `+10 EXP　·　連續第 ${streak} 天`}
+          +{expGain} EXP{bonusNote}{withDiary ? '　·　多了一篇日記 ✿' : ''}
         </div>
       </div>
     </div>
@@ -256,6 +310,9 @@ function App() {
   }, [foxState]);
   const [toast, setToast] = useStateApp(false);
   const [toastDiary, setToastDiary] = useStateApp(false);
+  const [toastExpGain, setToastExpGain] = useStateApp(10);
+  const [toastFirstToday, setToastFirstToday] = useStateApp(false);
+  const [levelUpInfo, setLevelUpInfo] = useStateApp(null);
   const [foxMood, setFoxMood] = useStateApp('happy');
   const [tweaks, setTweak] = window.useTweaks ? window.useTweaks(TWEAK_DEFAULTS) : [TWEAK_DEFAULTS, () => {}];
   const [user, setUser] = useStateApp(null);
@@ -264,6 +321,7 @@ function App() {
   const [goalPots, setGoalPots] = useStateApp([]);
   const [autoPots, setAutoPots] = useStateApp([]);
   const [monthClosed, setMonthClosed] = useStateApp(false);
+  const [budgetItems, setBudgetItems] = useStateApp([]);
 
   // apply palette
   useEffectApp(() => {
@@ -315,6 +373,15 @@ function App() {
     return () => { unsubGoals(); unsubAuto(); };
   }, [user]);
 
+  // budget subscription (feeds quick actions on home screen)
+  useEffectApp(() => {
+    if (!user) { setBudgetItems([]); return; }
+    return window.db.collection('users').doc(user.uid).collection('settings').doc('budget')
+      .onSnapshot(doc => {
+        setBudgetItems(doc.exists && doc.data().items ? doc.data().items : []);
+      });
+  }, [user]);
+
   // Track whether current month is already closed
   useEffectApp(() => {
     if (!user) { setMonthClosed(false); return; }
@@ -329,23 +396,41 @@ function App() {
     if (!user || !txId) return;
     await window.db.collection('users').doc(user.uid).collection('transactions').doc(txId).delete();
   };
-  const handleSaved = async (payload) => {
-    setFoxMood('celebrate');
-    setToast(true);
-    setToastDiary(!!(payload && payload.diary));
-    setTimeout(() => { setToast(false); setFoxMood('happy'); }, 2000);
 
-    // EXP gain
-    const expGain = (payload && payload.diary) ? 18 : 10;
-    const newExpRaw = foxState.exp + expGain;
-    const leveled = newExpRaw >= 100;
-    const newExp = leveled ? newExpRaw - 100 : newExpRaw;
-    const newLevel = leveled ? foxState.level + 1 : foxState.level;
-    setFoxState(s => ({ ...s, exp: newExp, level: newLevel, mood: leveled ? 'celebrate' : 'happy' }));
+  const gainExp = (amount) => {
+    const newExpRaw = foxState.exp + amount;
+    const levelsGained = Math.floor(newExpRaw / 100);
+    const newExp = newExpRaw % 100;
+    const newLevel = foxState.level + levelsGained;
+    setFoxState(s => ({ ...s, exp: newExp, level: newLevel }));
+    if (levelsGained > 0) setLevelUpInfo({ level: newLevel });
     if (user) {
       window.db.collection('users').doc(user.uid).collection('settings').doc('profile')
         .set({ exp: newExp, level: newLevel }, { merge: true });
     }
+  };
+
+  const handleSaved = async (payload) => {
+    setFoxMood('celebrate');
+
+    // EXP calculation with bonuses
+    let expGain = (payload && payload.diary) ? 18 : 10;
+    const streak = calculateStreak(transactions);
+    if (streak >= 30) expGain += 5;
+    else if (streak >= 7) expGain += 2;
+    const isFirstToday = !transactions.some(tx => {
+      if (!tx.createdAt) return false;
+      const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
+      return d.toDateString() === new Date().toDateString();
+    });
+    if (isFirstToday) expGain += 5;
+
+    gainExp(expGain);
+    setToastExpGain(expGain);
+    setToastFirstToday(isFirstToday);
+    setToast(true);
+    setToastDiary(!!(payload && payload.diary));
+    setTimeout(() => { setToast(false); setFoxMood('happy'); }, 2500);
 
     if (user && payload) {
       const raw = parseFloat(payload.amount) || 0;
@@ -425,10 +510,10 @@ function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
+      case 'home': return <HomeScreen data={liveData} budgetItems={budgetItems} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions}/>;
       case 'diary': return <DiaryScreen transactions={transactions}/>;
-      case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} foxState={foxState}/>;
+      case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} foxState={foxState} transactions={transactions} budgetItems={budgetItems} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
       default: return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd}/>;
     }
   };
@@ -465,6 +550,8 @@ function App() {
               onDeposit={(pot) => setDepositPot(pot)}
               goalPots={goalPots}
               autoPots={autoPots}
+              foxFur={foxState.fur}
+              foxAccessory={foxState.accessory}
             />
           </div>
         )}
@@ -494,12 +581,12 @@ function App() {
         )}
         {categoriesOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
-            <CategoryScreen onClose={() => setCategoriesOpen(false)}/>
+            <CategoryScreen onClose={() => setCategoriesOpen(false)} transactions={transactions}/>
           </div>
         )}
         {foxOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
-            <FoxScreen foxState={foxState} setFoxState={setFoxState} onClose={() => setFoxOpen(false)}/>
+            <FoxScreen foxState={foxState} setFoxState={setFoxState} onClose={() => setFoxOpen(false)} onExpGain={gainExp}/>
           </div>
         )}
         {showOnboarding && (
@@ -535,7 +622,8 @@ function App() {
             />
           </div>
         )}
-        <Toast show={toast} withDiary={toastDiary} streak={liveData.streak}/>
+        <Toast show={toast} withDiary={toastDiary} streak={liveData.streak} expGain={toastExpGain} isFirstToday={toastFirstToday}/>
+        {levelUpInfo && <LevelUpOverlay info={levelUpInfo} foxState={foxState} onClose={() => { setLevelUpInfo(null); setFoxMood('happy'); }}/>}
       </div>
   );
 }

@@ -2,7 +2,7 @@
 
 const { useState: useStateVault } = React;
 
-function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, goalPots = [], autoPots = [] }) {
+function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, goalPots = [], autoPots = [], foxFur = 'orange', foxAccessory = 'none' }) {
   const [tab, setTab] = useStateVault('all'); // all | auto | goal
 
   const totalAuto = autoPots.reduce((s, p) => s + (p.total || 0), 0);
@@ -27,7 +27,7 @@ function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, goalPots = [],
           </svg>
         </div>
         <div className="hand" style={{ fontSize: 24, color: 'var(--ink)' }}>我的金庫</div>
-        <div className="tap" style={{
+        <div className="tap" onClick={onAddGoal} style={{
           width: 36, height: 36, borderRadius: 12, background: '#fff',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           boxShadow: 'var(--shadow-sm)',
@@ -63,7 +63,7 @@ function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, goalPots = [],
                 position: 'relative',
               }}>
                 {/* fox holding coin */}
-                <Fox mood="excited" size={66}/>
+                <Fox mood="excited" size={66} fur={foxFur} accessory={foxAccessory}/>
                 <div style={{
                   position: 'absolute', bottom: -4, right: -6,
                   width: 28, height: 28, borderRadius: 14,

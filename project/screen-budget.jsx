@@ -16,22 +16,23 @@ function BudgetScreen({ onClose, transactions = [] }) {
   const [total, setTotal] = useStateBudget(20000);
   const [warnAt, setWarnAt] = useStateBudget(80);
   const [remindOn, setRemindOn] = useStateBudget(true);
-  const [items, setItems] = useStateBudget(DEFAULT_ITEMS);
+  const [items, setItems] = useStateBudget(null); // null = loading
   const [saving, setSaving] = useStateBudget(false);
 
   // Load budget settings from Firestore
   useEffectBudget(() => {
     const uid = window.auth.currentUser?.uid;
-    if (!uid) return;
+    if (!uid) { setItems(DEFAULT_ITEMS); return; }
     window.db.collection('users').doc(uid).collection('settings').doc('budget').get()
       .then(doc => {
-        if (!doc.exists) return;
+        if (!doc.exists) { setItems(DEFAULT_ITEMS); return; }
         const d = doc.data();
         if (d.total)   setTotal(d.total);
         if (d.warnAt)  setWarnAt(d.warnAt);
         if (d.remindOn !== undefined) setRemindOn(d.remindOn);
-        if (d.items)   setItems(d.items);
-      });
+        setItems(d.items || DEFAULT_ITEMS);
+      })
+      .catch(() => setItems(DEFAULT_ITEMS));
   }, []);
 
   // Calculate real used amounts from this month's transactions
@@ -44,6 +45,12 @@ function BudgetScreen({ onClose, transactions = [] }) {
   }).forEach(tx => {
     catUsed[tx.cat] = (catUsed[tx.cat] || 0) + Math.abs(tx.amt);
   });
+
+  if (!items) return (
+    <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
+      <div style={{ fontSize: 30, animation: 'wiggle 1s infinite' }}>✿</div>
+    </div>
+  );
 
   const liveItems = items.map(it => ({ ...it, used: catUsed[it.id] || 0 }));
 
