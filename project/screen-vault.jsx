@@ -2,7 +2,7 @@
 
 const { useState: useStateVault } = React;
 
-function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, goalPots = [], autoPots = [] }) {
+function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, goalPots = [], autoPots = [], foxFur = 'orange', foxAccessory = 'none' }) {
   const [tab, setTab] = useStateVault('all'); // all | auto | goal
 
   const totalAuto = autoPots.reduce((s, p) => s + (p.total || 0), 0);
@@ -63,7 +63,7 @@ function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, goalPots = [],
                 position: 'relative',
               }}>
                 {/* fox holding coin */}
-                <Fox mood="excited" size={66}/>
+                <Fox mood="excited" size={66} fur={foxFur} accessory={foxAccessory}/>
                 <div style={{
                   position: 'absolute', bottom: -4, right: -6,
                   width: 28, height: 28, borderRadius: 14,

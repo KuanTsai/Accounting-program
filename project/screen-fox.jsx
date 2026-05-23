@@ -19,10 +19,10 @@ const ACCESSORY_OPTIONS = [
   { id: 'crown',   label: '皇冠', unlock: 15 },
 ];
 
-function FoxScreen({ foxState, setFoxState, onClose }) {
+function FoxScreen({ foxState, setFoxState, onClose, onExpGain }) {
   const [editingName, setEditingName] = useStateFox(false);
   const [nameInput, setNameInput] = useStateFox(foxState.name);
-  const [tab, setTab] = useStateFox('customize'); // customize | history
+  const [tab, setTab] = useStateFox('customize');
   const [floatNote, setFloatNote] = useStateFox(null);
 
   const saveProfile = (updates) => {
@@ -32,40 +32,58 @@ function FoxScreen({ foxState, setFoxState, onClose }) {
       .set(updates, { merge: true });
   };
 
+  // Apply stat decay based on time elapsed since last interaction
+  useEffectFox(() => {
+    const lastUpdated = foxState.lastUpdatedAt;
+    if (!lastUpdated) return;
+    const lastTime = lastUpdated.toDate ? lastUpdated.toDate() : new Date(lastUpdated);
+    const elapsedHrs = (new Date() - lastTime) / 3600000;
+    if (elapsedHrs < 0.1) return;
+    const newSatiety  = Math.max(0, (foxState.satiety  || 80) - Math.round(elapsedHrs * 3));
+    const newEnergy   = Math.max(0, (foxState.energy   || 80) - Math.round(elapsedHrs * 2.5));
+    const newMood     = Math.max(0, (foxState.moodScore || 90) - Math.round(elapsedHrs * 2));
+    const now = new Date().toISOString();
+    setFoxState(s => ({ ...s, satiety: newSatiety, energy: newEnergy, moodScore: newMood, lastUpdatedAt: now }));
+    saveProfile({ satiety: newSatiety, energy: newEnergy, moodScore: newMood, lastUpdatedAt: now });
+  }, []);
+
   const showNote = (text, color = 'var(--accent)') => {
     setFloatNote({ text, color, key: Date.now() });
     setTimeout(() => setFloatNote(null), 1200);
   };
 
+  const saveStats = (updates) => {
+    const now = new Date().toISOString();
+    setFoxState(s => ({ ...s, ...updates, lastUpdatedAt: now }));
+    saveProfile({ ...updates, lastUpdatedAt: now });
+  };
+
   const feed = () => {
-    setFoxState(s => ({
-      ...s,
-      mood: 'eating',
-      satiety: Math.min(100, s.satiety + 25),
-      moodScore: Math.min(100, s.moodScore + 5),
-    }));
-    showNote('滿足度 +25 ♥', '#C5751F');
+    const newSatiety = Math.min(100, (foxState.satiety || 80) + 25);
+    const newMood = Math.min(100, (foxState.moodScore || 90) + 5);
+    setFoxState(s => ({ ...s, mood: 'eating' }));
+    saveStats({ satiety: newSatiety, moodScore: newMood });
+    showNote('飽足 +25　+3 EXP ♥', '#C5751F');
+    if (onExpGain) onExpGain(3);
     setTimeout(() => setFoxState(s => ({ ...s, mood: 'happy' })), 1500);
   };
 
   const play = () => {
-    setFoxState(s => ({
-      ...s,
-      mood: 'excited',
-      energy: Math.max(0, s.energy - 12),
-      moodScore: Math.min(100, s.moodScore + 18),
-    }));
-    showNote('心情 +18 ✿', 'var(--accent)');
+    const newEnergy = Math.max(0, (foxState.energy || 80) - 12);
+    const newMood = Math.min(100, (foxState.moodScore || 90) + 18);
+    setFoxState(s => ({ ...s, mood: 'excited' }));
+    saveStats({ energy: newEnergy, moodScore: newMood });
+    showNote('心情 +18　+5 EXP ✿', 'var(--accent)');
+    if (onExpGain) onExpGain(5);
     setTimeout(() => setFoxState(s => ({ ...s, mood: 'happy' })), 1500);
   };
 
   const rest = () => {
-    setFoxState(s => ({
-      ...s,
-      mood: 'sleepy',
-      energy: Math.min(100, s.energy + 30),
-    }));
-    showNote('活力 +30 zZ', 'var(--lavender)');
+    const newEnergy = Math.min(100, (foxState.energy || 80) + 30);
+    setFoxState(s => ({ ...s, mood: 'sleepy' }));
+    saveStats({ energy: newEnergy });
+    showNote('活力 +30　+2 EXP zZ', 'var(--lavender)');
+    if (onExpGain) onExpGain(2);
     setTimeout(() => setFoxState(s => ({ ...s, mood: 'happy' })), 2000);
   };
 
@@ -209,9 +227,9 @@ function FoxScreen({ foxState, setFoxState, onClose }) {
         <div style={{ padding: '18px 20px 0' }}>
           <div className="hand" style={{ fontSize: 20, color: 'var(--ink)', marginBottom: 10 }}>陪牠做點什麼</div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10 }}>
-            <ActionButton label="餵食" sub="+ 飽足" bg="#FFF1E8" color="#C5751F" icon="🍙" onClick={feed}/>
-            <ActionButton label="玩耍" sub="+ 心情" bg="var(--accent-faint)" color="var(--accent)" icon="✿" onClick={play}/>
-            <ActionButton label="休息" sub="+ 活力" bg="#EFE9FF" color="#7E6E94" icon="zZ" onClick={rest}/>
+            <ActionButton label="餵食" sub="+飽足 +3EXP" bg="#FFF1E8" color="#C5751F" icon="🍙" onClick={feed}/>
+            <ActionButton label="玩耍" sub="+心情 +5EXP" bg="var(--accent-faint)" color="var(--accent)" icon="✿" onClick={play}/>
+            <ActionButton label="休息" sub="+活力 +2EXP" bg="#EFE9FF" color="#7E6E94" icon="zZ" onClick={rest}/>
           </div>
         </div>
 
