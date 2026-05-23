@@ -8,7 +8,7 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
   const closeMonth = now.getMonth();
   const closeMonthLabel = `${closeMonth + 1}月`;
 
-  const [budgetItems, setBudgetItems] = useStateClose([]);
+  const [envelopes, setEnvelopes] = useStateClose([]);
   const [loadingBudget, setLoadingBudget] = useStateClose(true);
   const [picks, setPicks] = useStateClose({});
   const [openPicker, setOpenPicker] = useStateClose(null);
@@ -20,7 +20,8 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
     if (!uid) { setLoadingBudget(false); return; }
     window.db.collection('users').doc(uid).collection('settings').doc('budget').get()
       .then(doc => {
-        if (doc.exists) setBudgetItems(doc.data().items || []);
+        const d = doc.exists ? doc.data() : null;
+        setEnvelopes(d && d.envelopes && d.envelopes.length > 0 ? d.envelopes : (window.DEFAULT_ENVELOPES || []));
         setLoadingBudget(false);
       });
   }, []);
@@ -33,9 +34,12 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
     return d.getFullYear() === closeYear && d.getMonth() === closeMonth;
   }).forEach(tx => { catUsed[tx.cat] = (catUsed[tx.cat] || 0) + Math.abs(tx.amt); });
 
-  const items = budgetItems
-    .filter(b => b.on && b.total > 0)
-    .map(b => ({ catId: b.id, total: b.total, used: catUsed[b.id] || 0, leftover: Math.max(0, b.total - (catUsed[b.id] || 0)), vault: b.vault }))
+  const items = envelopes
+    .filter(env => env.total > 0)
+    .map(env => {
+      const used = (env.cats || []).reduce((s, cid) => s + (catUsed[cid] || 0), 0);
+      return { envId: env.id, label: env.label, emoji: env.emoji, color: env.color, bg: env.bg, total: env.total, used, leftover: Math.max(0, env.total - used), vault: env.vault };
+    })
     .filter(it => it.leftover > 0);
 
   const destinations = [
@@ -47,15 +51,15 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
   // Set default picks once items load
   useEffectClose(() => {
     if (items.length > 0 && Object.keys(picks).length === 0) {
-      setPicks(Object.fromEntries(items.map(it => [it.catId, it.vault ? 'auto' : 'rollover'])));
+      setPicks(Object.fromEntries(items.map(it => [it.envId, it.vault ? 'auto' : 'rollover'])));
     }
   }, [items.length]);
 
   const totalSaved = items.reduce((s, it) => {
-    const dest = destinations.find(d => d.id === (picks[it.catId] || 'rollover'));
+    const dest = destinations.find(d => d.id === (picks[it.envId] || 'rollover'));
     return s + (dest && dest.kind !== 'rollover' ? it.leftover : 0);
   }, 0);
-  const totalRollover = items.reduce((s, it) => s + (picks[it.catId] === 'rollover' ? it.leftover : 0), 0);
+  const totalRollover = items.reduce((s, it) => s + (picks[it.envId] === 'rollover' ? it.leftover : 0), 0);
 
   const handleConfirm = async () => {
     if (saving) return;
@@ -64,9 +68,8 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
     if (!uid) { setSaving(false); return; }
     try {
       // Auto pot updates (get existing for history)
-      for (const it of items.filter(it => picks[it.catId] === 'auto' && it.leftover > 0)) {
-        const cat = CATEGORIES.find(c => c.id === it.catId);
-        const potRef = window.db.collection('users').doc(uid).collection('autopots').doc(it.catId);
+      for (const it of items.filter(it => picks[it.envId] === 'auto' && it.leftover > 0)) {
+        const potRef = window.db.collection('users').doc(uid).collection('autopots').doc(it.envId);
         const existing = await potRef.get();
         if (existing.exists) {
           const hist = (existing.data().history || []).slice(0, 11);
@@ -74,7 +77,7 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
           await potRef.update({ total: firebase.firestore.FieldValue.increment(it.leftover), monthly: it.leftover, history: hist });
         } else {
           await potRef.set({
-            catId: it.catId, label: `${cat?.label || it.catId}金庫`,
+            envId: it.envId, label: `${it.label}金庫`,
             total: it.leftover, monthly: it.leftover,
             history: [[closeMonthLabel, it.leftover]],
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),
@@ -82,8 +85,8 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
         }
       }
       // Goal pot deposits
-      for (const it of items.filter(it => picks[it.catId] && picks[it.catId] !== 'auto' && picks[it.catId] !== 'rollover' && it.leftover > 0)) {
-        await window.db.collection('users').doc(uid).collection('goals').doc(picks[it.catId]).update({
+      for (const it of items.filter(it => picks[it.envId] && picks[it.envId] !== 'auto' && picks[it.envId] !== 'rollover' && it.leftover > 0)) {
+        await window.db.collection('users').doc(uid).collection('goals').doc(picks[it.envId]).update({
           saved: firebase.firestore.FieldValue.increment(it.leftover),
         });
       }
@@ -92,7 +95,7 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
       await window.db.collection('users').doc(uid).collection('closes').doc(closeKey).set({
         closedAt: firebase.firestore.FieldValue.serverTimestamp(),
         totalSaved, totalRollover, month: closeMonthLabel,
-        items: items.map(it => ({ catId: it.catId, leftover: it.leftover, dest: picks[it.catId] || 'rollover' })),
+        items: items.map(it => ({ envId: it.envId, leftover: it.leftover, dest: picks[it.envId] || 'rollover' })),
       });
       setConfirmed(true);
     } catch (e) {
@@ -190,22 +193,21 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
         {/* per-category breakdown */}
         <div style={{ padding: '20px 20px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div className="hand" style={{ fontSize: 20, color: 'var(--ink)' }}>分類處理</div>
+            <div className="hand" style={{ fontSize: 20, color: 'var(--ink)' }}>信封處理</div>
             <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>點箭頭可以改去向 ▾</span>
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {items.map(it => {
-              const cat = CATEGORIES.find(c => c.id === it.catId);
-              const pick = picks[it.catId] || 'rollover';
+              const pick = picks[it.envId] || 'rollover';
               const dest = destinations.find(d => d.id === pick);
-              const destLabel = pick === 'auto' ? `${cat?.label || it.catId}金庫` : (dest?.label || pick);
+              const destLabel = pick === 'auto' ? `${it.label}金庫` : (dest?.label || pick);
               const isRollover = pick === 'rollover';
               return (
-                <div key={it.catId} style={{ background: 'var(--card)', borderRadius: 18, padding: '12px 14px', boxShadow: 'var(--shadow-sm)' }}>
+                <div key={it.envId} style={{ background: 'var(--card)', borderRadius: 18, padding: '12px 14px', boxShadow: 'var(--shadow-sm)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <CatBubble id={it.catId} size={40}/>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: it.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, flexShrink: 0 }}>{it.emoji}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 600 }}>{cat?.label}</div>
+                      <div style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 600 }}>{it.label}</div>
                       <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 1 }}>
                         花 ${it.used.toLocaleString()} / 預算 ${it.total.toLocaleString()}
                       </div>
@@ -217,7 +219,7 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
                       </div>
                     </div>
                   </div>
-                  <div className="tap" onClick={() => setOpenPicker(openPicker === it.catId ? null : it.catId)} style={{
+                  <div className="tap" onClick={() => setOpenPicker(openPicker === it.envId ? null : it.envId)} style={{
                     marginTop: 10, padding: '8px 12px', borderRadius: 12,
                     background: isRollover ? 'var(--accent-faint)' : '#FFF1E8',
                     display: 'flex', alignItems: 'center', gap: 8,
@@ -230,17 +232,17 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
                       <span style={{ color: 'var(--ink-soft)' }}>去向：</span>
                       <b style={{ color: isRollover ? 'var(--accent)' : '#C5751F' }}>{destLabel}</b>
                     </div>
-                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="var(--ink-soft)" strokeWidth="2" style={{ transition: 'transform 0.15s', transform: openPicker === it.catId ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                    <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="var(--ink-soft)" strokeWidth="2" style={{ transition: 'transform 0.15s', transform: openPicker === it.envId ? 'rotate(180deg)' : 'rotate(0deg)' }}>
                       <path d="M1 1l4 4 4-4"/>
                     </svg>
                   </div>
-                  {openPicker === it.catId && (
+                  {openPicker === it.envId && (
                     <div style={{ marginTop: 6, background: 'var(--bg)', borderRadius: 12, padding: 4, animation: 'pop-in 0.2s ease-out' }}>
                       {destinations.map(d => {
-                        const label = d.id === 'auto' ? `${cat?.label || it.catId}金庫` : d.label;
+                        const label = d.id === 'auto' ? `${it.label}金庫` : d.label;
                         const isSelected = pick === d.id;
                         return (
-                          <div key={d.id} className="tap" onClick={() => { setPicks({ ...picks, [it.catId]: d.id }); setOpenPicker(null); }} style={{
+                          <div key={d.id} className="tap" onClick={() => { setPicks({ ...picks, [it.envId]: d.id }); setOpenPicker(null); }} style={{
                             padding: '8px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 8,
                             background: isSelected ? 'var(--accent-faint)' : 'transparent',
                             color: isSelected ? 'var(--accent)' : 'var(--ink)',

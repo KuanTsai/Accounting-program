@@ -173,14 +173,14 @@ function Toast({ show, withDiary, streak = 0, expGain = 10, isFirstToday = false
 }
 
 // ─── add modal wrapper ─────────────────────────────────
-function AddModal({ open, onClose, onDone }) {
+function AddModal({ open, onClose, onDone, envelopes = [] }) {
   if (!open) return null;
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 70,
       animation: 'slide-up 0.3s ease-out',
     }}>
-      <AddScreen onClose={onClose} onSave={(payload) => { onClose(); onDone(payload); }}/>
+      <AddScreen onClose={onClose} envelopes={envelopes} onSave={(payload) => { onClose(); onDone(payload); }}/>
     </div>
   );
 }
@@ -384,7 +384,7 @@ function App() {
   const [goalPots, setGoalPots] = useStateApp([]);
   const [autoPots, setAutoPots] = useStateApp([]);
   const [monthClosed, setMonthClosed] = useStateApp(false);
-  const [budgetItems, setBudgetItems] = useStateApp([]);
+  const [envelopes, setEnvelopes] = useStateApp([]);
 
   // apply palette
   useEffectApp(() => {
@@ -438,10 +438,11 @@ function App() {
 
   // budget subscription (feeds quick actions on home screen)
   useEffectApp(() => {
-    if (!user) { setBudgetItems([]); return; }
+    if (!user) { setEnvelopes([]); return; }
     return window.db.collection('users').doc(user.uid).collection('settings').doc('budget')
       .onSnapshot(doc => {
-        setBudgetItems(doc.exists && doc.data().items ? doc.data().items : []);
+        const d = doc.exists ? doc.data() : null;
+        setEnvelopes(d && d.envelopes && d.envelopes.length > 0 ? d.envelopes : (window.DEFAULT_ENVELOPES || []));
       });
   }, [user]);
 
@@ -510,6 +511,7 @@ function App() {
       const mm = now.getMinutes().toString().padStart(2, '0');
       await window.db.collection('users').doc(user.uid).collection('transactions').add({
         cat: payload.cat,
+        envelope: payload.envelope || null,
         label: (CATEGORIES.find(c => c.id === payload.cat) || {}).label || payload.cat,
         amt,
         note: payload.note || null,
@@ -580,10 +582,10 @@ function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} budgetItems={budgetItems} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
-      case 'stats': return <StatsScreen data={liveData} transactions={transactions}/>;
+      case 'home': return <HomeScreen data={liveData} envelopes={envelopes} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
+      case 'stats': return <StatsScreen data={liveData} transactions={transactions} envelopes={envelopes}/>;
       case 'diary': return <DiaryScreen transactions={transactions}/>;
-      case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} palette={tweaks.palette} foxState={foxState} transactions={transactions} budgetItems={budgetItems} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
+      case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} palette={tweaks.palette} foxState={foxState} transactions={transactions} envelopes={envelopes} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
       default: return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd}/>;
     }
   };
@@ -605,7 +607,7 @@ function App() {
         {renderScreen()}
       </div>
       <BottomNav current={tab} onSelect={setTab} onAdd={handleAdd} isMobile={true}/>
-        <AddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={handleSaved}/>
+        <AddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={handleSaved} envelopes={envelopes}/>
         {budgetOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
             <BudgetScreen onClose={() => setBudgetOpen(false)} transactions={transactions}/>
@@ -669,15 +671,9 @@ function App() {
               setShowOnboarding(false);
               if (user) {
                 const uid = user.uid;
-                // Save fox profile to Firestore
                 window.db.collection('users').doc(uid).collection('settings').doc('profile').set({ ...fox, joinedAt });
-                // Build budget from picked categories (equal split, round to 500)
-                const perCat = pickedCats.length > 0
-                  ? Math.round(budget / pickedCats.length / 500) * 500
-                  : 0;
-                const budgetItems = pickedCats.map(id => ({ id, total: perCat, on: true, vault: true }));
                 window.db.collection('users').doc(uid).collection('settings').doc('budget').set({
-                  total: budget, warnAt: 80, remindOn: true, items: budgetItems,
+                  total: budget, warnAt: 80, remindOn: true, envelopes: window.DEFAULT_ENVELOPES || [],
                 });
               }
             }}

@@ -2,7 +2,7 @@
 
 const { useState: useStateAdd } = React;
 
-function AddScreen({ onClose, onSave }) {
+function AddScreen({ onClose, onSave, envelopes = [] }) {
   const [amount, setAmount] = useStateAdd('0');
   const [cat, setCat] = useStateAdd('food');
   const [type, setType] = useStateAdd('expense'); // expense | income
@@ -10,6 +10,11 @@ function AddScreen({ onClose, onSave }) {
   const [mood, setMood] = useStateAdd(null);
   const [diaryOpen, setDiaryOpen] = useStateAdd(false);
   const [diaryText, setDiaryText] = useStateAdd('');
+  const [envelopeId, setEnvelopeId] = useStateAdd(null);
+
+  const derivedEnvId = (envelopes.find(env => env.cats && env.cats.includes(cat)) || {}).id || null;
+  const activeEnvId = envelopeId !== null ? envelopeId : derivedEnvId;
+  const activeEnv = envelopes.find(env => env.id === activeEnvId);
 
   const push = (key) => {
     if (key === 'del') {
@@ -54,7 +59,7 @@ function AddScreen({ onClose, onSave }) {
         <div className="tap" style={{
           padding: '6px 14px', borderRadius: 999, background: 'var(--accent)',
           color: '#fff', fontSize: 13, fontWeight: 600,
-        }} onClick={() => onSave({ amount, cat, type, note, mood, diary: diaryOpen ? diaryText.trim() : '' })}>
+        }} onClick={() => onSave({ amount, cat, type, note, mood, diary: diaryOpen ? diaryText.trim() : '', envelope: activeEnvId })}>
           完成
         </div>
       </div>
@@ -117,6 +122,31 @@ function AddScreen({ onClose, onSave }) {
           ))}
         </div>
       </div>
+
+      {/* envelope picker */}
+      {envelopes.length > 0 && (
+        <div style={{ padding: '10px 20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div className="hand" style={{ fontSize: 17, color: 'var(--ink)' }}>信封預算</div>
+            <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>已選：{activeEnv?.label || '未分配'}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            {envelopes.map(env => (
+              <div key={env.id} onClick={() => setEnvelopeId(activeEnvId === env.id ? null : env.id)} className="tap" style={{
+                flexShrink: 0, padding: '6px 12px', borderRadius: 999,
+                background: activeEnvId === env.id ? env.bg : '#fff',
+                border: `1.5px solid ${activeEnvId === env.id ? env.color : 'transparent'}`,
+                boxShadow: 'var(--shadow-sm)',
+                display: 'flex', alignItems: 'center', gap: 5,
+                transition: 'all 0.15s',
+              }}>
+                <span style={{ fontSize: 14 }}>{env.emoji}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: activeEnvId === env.id ? env.color : 'var(--ink-soft)' }}>{env.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* mood + note */}
       <div style={{ padding: '12px 20px 0' }}>

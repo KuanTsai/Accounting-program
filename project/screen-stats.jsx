@@ -1,6 +1,6 @@
 // Stats screen — pie chart, category breakdown, monthly trend
 
-function StatsScreen({ data, transactions = [] }) {
+function StatsScreen({ data, transactions = [], envelopes = [] }) {
   const now = new Date();
 
   // Current month expenses
@@ -146,6 +146,38 @@ function StatsScreen({ data, transactions = [] }) {
                     </div>
                   </div>
                   <span style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 600, width: 32, textAlign: 'right' }}>{b.pct}%</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* envelope analysis */}
+      {envelopes.length > 0 && (
+        <div style={{ padding: '18px 20px 0' }}>
+          <div className="hand" style={{ fontSize: 20, color: 'var(--ink)', marginBottom: 10 }}>信封分析</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {envelopes.map(env => {
+              const used = (env.cats || []).reduce((s, cid) => s + (catTotals[cid] || 0), 0);
+              const pct = env.total > 0 ? Math.min(100, Math.round((used / env.total) * 100)) : 0;
+              const over = used > env.total;
+              return (
+                <div key={env.id} style={{ background: 'var(--card)', borderRadius: 18, padding: '12px 14px', boxShadow: 'var(--shadow-sm)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                    <div style={{ width: 36, height: 36, borderRadius: 12, background: env.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{env.emoji}</div>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{env.label}</div>
+                      <div style={{ fontSize: 11, color: 'var(--ink-soft)' }}>預算 ${env.total.toLocaleString()}</div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: over ? '#E05A5A' : 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>${used.toLocaleString()}</div>
+                      <div style={{ fontSize: 10, color: over ? '#E05A5A' : 'var(--ink-soft)' }}>{over ? '超支！' : `${pct}%`}</div>
+                    </div>
+                  </div>
+                  <div style={{ background: '#F5EBE4', height: 6, borderRadius: 3, overflow: 'hidden' }}>
+                    <div style={{ height: '100%', width: `${pct}%`, borderRadius: 3, background: over ? '#E05A5A' : env.color, transition: 'width 0.5s ease' }}/>
+                  </div>
                 </div>
               );
             })}

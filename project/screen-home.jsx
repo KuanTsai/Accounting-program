@@ -30,7 +30,7 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // ─────────────────────────────────────────────────────────────
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
-function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onOpenPalette, onOpenSettings, showCloseBanner = true, budgetItems = [] }) {
+function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onOpenPalette, onOpenSettings, showCloseBanner = true, envelopes = [] }) {
   const isNearMonthEnd = (() => {
     const d = new Date();
     const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
@@ -169,11 +169,11 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
           <span style={{ fontSize: 11, color: 'var(--ink-faint)', fontFamily: 'Caveat', fontWeight: 600 }}>tap to add ♥</span>
         </div>
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-          {(budgetItems.filter(b => b.on).length > 0
-            ? budgetItems.filter(b => b.on).slice(0, 5)
+          {(envelopes.length > 0
+            ? envelopes.flatMap(env => env.cats.map(catId => ({ id: catId, envLabel: env.label, envColor: env.color }))).slice(0, 6)
             : [
-                { id: 'drink', total: null }, { id: 'food', total: null },
-                { id: 'transport', total: null }, { id: 'shop', total: null }, { id: 'fun', total: null },
+                { id: 'drink' }, { id: 'food' },
+                { id: 'transport' }, { id: 'shop' }, { id: 'fun' },
               ]
           ).map((q, i) => {
             const cat = CATEGORIES.find(c => c.id === q.id) || { label: q.id };
@@ -186,8 +186,8 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
               }}>
                 <CatBubble id={q.id} size={36} />
                 <div style={{ fontSize: 12, color: 'var(--ink)', marginTop: 6, fontWeight: 500 }}>{cat.label}</div>
-                {q.total != null && (
-                  <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 1 }}>預算 ${q.total.toLocaleString()}</div>
+                {q.envLabel && (
+                  <div style={{ fontSize: 10, color: 'var(--ink-faint)', marginTop: 1 }}>{q.envLabel}</div>
                 )}
               </div>
             );

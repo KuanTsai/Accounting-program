@@ -1,39 +1,38 @@
-// Budget management screen — set total + per-category, warnings, reminders
+// Budget management screen — envelope budgeting system (大信封)
 
 const { useState: useStateBudget, useEffect: useEffectBudget } = React;
 
-const DEFAULT_ITEMS = [
-  { id: 'food',      total: 6000, on: true,  vault: true  },
-  { id: 'shop',      total: 3500, on: true,  vault: true  },
-  { id: 'fun',       total: 4000, on: true,  vault: true  },
-  { id: 'drink',     total: 2000, on: true,  vault: true  },
-  { id: 'transport', total: 1500, on: true,  vault: false },
-  { id: 'beauty',    total: 1500, on: true,  vault: true  },
-  { id: 'travel',    total: 3000, on: false, vault: false },
+const DEFAULT_ENVELOPES = [
+  { id: 'daily',   label: '日常生活', emoji: '🧺', color: '#FF8FAB', bg: '#FFE5EC', total: 12000, vault: true,  cats: ['food', 'drink', 'home'] },
+  { id: 'fun',     label: '玩樂',     emoji: '🎮', color: '#FFD66B', bg: '#FFF4D1', total: 6000,  vault: true,  cats: ['fun', 'shop', 'beauty', 'travel'] },
+  { id: 'invest',  label: '投資自己', emoji: '📈', color: '#7DCBA8', bg: '#D8F0E2', total: 3000,  vault: true,  cats: ['study', 'health'] },
+  { id: 'fixed',   label: '固定支出', emoji: '🏠', color: '#A8D8F0', bg: '#E0F2FA', total: 8000,  vault: false, cats: ['transport'] },
+  { id: 'reserve', label: '備用金',   emoji: '🛡️', color: '#C9B8F0', bg: '#EFE9FF', total: 5000,  vault: true,  cats: ['gift'] },
 ];
+window.DEFAULT_ENVELOPES = DEFAULT_ENVELOPES;
 
 function BudgetScreen({ onClose, transactions = [] }) {
   const [total, setTotal] = useStateBudget(20000);
   const [warnAt, setWarnAt] = useStateBudget(80);
   const [remindOn, setRemindOn] = useStateBudget(true);
-    const [items, setItems] = useStateBudget(null); // null = loading
+  const [envelopes, setEnvelopes] = useStateBudget(null); // null = loading
   const [saving, setSaving] = useStateBudget(false);
-  const [addingCat, setAddingCat] = useStateBudget(false);
+  const [addingCatTo, setAddingCatTo] = useStateBudget(null); // envelope id
 
   // Load budget settings from Firestore
   useEffectBudget(() => {
     const uid = window.auth.currentUser?.uid;
-    if (!uid) { setItems(DEFAULT_ITEMS); return; }
+    if (!uid) { setEnvelopes(DEFAULT_ENVELOPES); return; }
     window.db.collection('users').doc(uid).collection('settings').doc('budget').get()
       .then(doc => {
-        if (!doc.exists) { setItems(DEFAULT_ITEMS); return; }
+        if (!doc.exists) { setEnvelopes(DEFAULT_ENVELOPES); return; }
         const d = doc.data();
-        if (d.total)   setTotal(d.total);
-        if (d.warnAt)  setWarnAt(d.warnAt);
+        if (d.total)    setTotal(d.total);
+        if (d.warnAt)   setWarnAt(d.warnAt);
         if (d.remindOn !== undefined) setRemindOn(d.remindOn);
-        setItems(d.items && d.items.length > 0 ? d.items : DEFAULT_ITEMS);
+        setEnvelopes(d.envelopes && d.envelopes.length > 0 ? d.envelopes : DEFAULT_ENVELOPES);
       })
-      .catch(() => setItems(DEFAULT_ITEMS));
+      .catch(() => setEnvelopes(DEFAULT_ENVELOPES));
   }, []);
 
   // Calculate real used amounts from this month's transactions
@@ -47,34 +46,52 @@ function BudgetScreen({ onClose, transactions = [] }) {
     catUsed[tx.cat] = (catUsed[tx.cat] || 0) + Math.abs(tx.amt);
   });
 
-  if (!items) return (
+  if (!envelopes) return (
     <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg)' }}>
       <div style={{ fontSize: 30, animation: 'wiggle 1s infinite' }}>✿</div>
     </div>
   );
 
-  const liveItems = items.map(it => ({ ...it, used: catUsed[it.id] || 0 }));
+  const updateEnvelope = (id, patch) => setEnvelopes(prev => prev.map(e => e.id === id ? { ...e, ...patch } : e));
 
-  const allocated = liveItems.filter(i => i.on).reduce((s, i) => s + i.total, 0);
-  const used = liveItems.reduce((s, i) => s + i.used, 0);
+  const liveEnvelopes = envelopes.map(env => ({
+    ...env,
+    used: env.cats.reduce((s, catId) => s + (catUsed[catId] || 0), 0),
+  }));
+
+  const allocated = liveEnvelopes.reduce((s, e) => s + e.total, 0);
+  const used = liveEnvelopes.reduce((s, e) => s + e.used, 0);
   const remaining = total - used;
-  const pct = (used / total) * 100;
+  const pct = total > 0 ? (used / total) * 100 : 0;
   const overWarn = pct > warnAt;
 
-  const updateItem = (id, key, val) => {
-    setItems(items.map(i => i.id === id ? { ...i, [key]: val } : i));
-  };
+  // All cat ids already in some envelope
+  const allAssignedCats = envelopes.flatMap(e => e.cats);
 
   const handleSave = async () => {
     setSaving(true);
     const uid = window.auth.currentUser?.uid;
     if (uid) {
       await window.db.collection('users').doc(uid).collection('settings').doc('budget').set({
-        total, warnAt, remindOn, items,
+        total, warnAt, remindOn, envelopes,
       });
     }
     setSaving(false);
     onClose();
+  };
+
+  const addNewEnvelope = () => {
+    const newId = 'env_' + Date.now();
+    setEnvelopes(prev => [...prev, {
+      id: newId,
+      label: '新信封',
+      emoji: '📦',
+      color: '#FFB97A',
+      bg: '#FFE9D6',
+      total: 2000,
+      vault: true,
+      cats: [],
+    }]);
   };
 
   return (
@@ -102,7 +119,7 @@ function BudgetScreen({ onClose, transactions = [] }) {
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 30 }}>
-        {/* total budget */}
+        {/* total budget card */}
         <div style={{ padding: '6px 20px 0' }}>
           <div style={{
             background: 'linear-gradient(135deg, var(--accent-faint) 0%, #FFF6F0 100%)',
@@ -117,7 +134,7 @@ function BudgetScreen({ onClose, transactions = [] }) {
                 </div>
                 <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 2 }}>本月總預算</div>
                 <div style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 3, lineHeight: 1.4 }}>
-                  信封預算：每個分類都有自己的額度，<br/>月底沒花完的錢自動存進金庫 ✿
+                  信封預算：每個信封都有自己的額度，<br/>月底沒花完的錢自動存進金庫 ✿
                 </div>
                 <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 6 }}>
                   <span style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 600 }}>NT$</span>
@@ -142,7 +159,7 @@ function BudgetScreen({ onClose, transactions = [] }) {
               </div>
             </div>
 
-            {/* progress with fox */}
+            {/* progress bar with fox */}
             <div style={{ marginTop: 14, background: 'rgba(255,255,255,0.7)', height: 16, borderRadius: 8, padding: 2, position: 'relative' }}>
               <div style={{
                 height: '100%', width: `${Math.min(pct, 100)}%`, borderRadius: 6,
@@ -208,7 +225,7 @@ function BudgetScreen({ onClose, transactions = [] }) {
               </svg>
             </div>
             <div style={{ flex: 1 }}>
-              <div style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 600 }}>分類預算總額</div>
+              <div style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 600 }}>信封預算總額</div>
               <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 2 }}>
                 ${allocated.toLocaleString()} / ${total.toLocaleString()} 已分配
               </div>
@@ -217,38 +234,43 @@ function BudgetScreen({ onClose, transactions = [] }) {
               fontSize: 12, fontWeight: 700,
               color: allocated > total ? '#D86A8A' : '#3B8A5C',
             }}>
-              {allocated > total ? `超 $${allocated - total}` : `剩 $${total - allocated}`}
+              {allocated > total ? `超 $${(allocated - total).toLocaleString()}` : `剩 $${(total - allocated).toLocaleString()}`}
             </span>
           </div>
         </div>
 
-        {/* per-category */}
+        {/* envelope list */}
         <div style={{ padding: '20px 20px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div className="hand" style={{ fontSize: 20, color: 'var(--ink)' }}>分類預算</div>
+            <div className="hand" style={{ fontSize: 20, color: 'var(--ink)' }}>我的信封</div>
             <span style={{ fontSize: 11, color: 'var(--ink-faint)', fontFamily: 'Caveat', fontWeight: 600 }}>
-              tap to edit
+              envelope budgeting
             </span>
           </div>
 
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {liveItems.map(it => (
-              <BudgetItem key={it.id} item={it} onChange={(k, v) => updateItem(it.id, k, v)}/>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {liveEnvelopes.map(env => (
+              <EnvelopeCard
+                key={env.id}
+                env={env}
+                onUpdate={(patch) => updateEnvelope(env.id, patch)}
+                onAddCat={() => setAddingCatTo(env.id)}
+              />
             ))}
 
-            {/* add new */}
-            <div className="tap dashed-border" onClick={() => setAddingCat(true)} style={{
+            {/* add new envelope */}
+            <div className="tap dashed-border" onClick={addNewEnvelope} style={{
               padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
               background: 'rgba(255,255,255,0.5)',
             }}>
               <div style={{
-                width: 36, height: 36, borderRadius: 18,
+                width: 38, height: 38, borderRadius: 19,
                 background: 'var(--accent-faint)', color: 'var(--accent)',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 20, fontWeight: 600,
               }}>＋</div>
               <span style={{ fontSize: 14, color: 'var(--accent)', fontWeight: 600 }}>
-                新增分類預算
+                新增信封
               </span>
             </div>
           </div>
@@ -295,22 +317,144 @@ function BudgetScreen({ onClose, transactions = [] }) {
           }}>
             <span style={{ fontSize: 14, marginTop: -1 }}>🦊</span>
             <span style={{ flex: 1 }}>
-              月底結算時，開了金庫的分類，沒花完的錢會自動進小金庫；沒開的分類則合併到下月預算。
+              月底結算時，開了金庫的信封，沒花完的錢會自動進小金庫；沒開的信封則合併到下月預算。
             </span>
           </div>
         </div>
       </div>
 
-      {addingCat && (
+      {addingCatTo !== null && (
         <CatPickerSheet
-          existing={items.map(i => i.id)}
-          onPick={(id) => {
-            setItems(prev => [...prev, { id, total: 1000, on: true, vault: true }]);
-            setAddingCat(false);
+          existing={allAssignedCats}
+          onPick={(catId) => {
+            updateEnvelope(addingCatTo, {
+              cats: [...(envelopes.find(e => e.id === addingCatTo)?.cats || []), catId],
+            });
+            setAddingCatTo(null);
           }}
-          onClose={() => setAddingCat(false)}
+          onClose={() => setAddingCatTo(null)}
         />
       )}
+    </div>
+  );
+}
+
+function EnvelopeCard({ env, onUpdate, onAddCat }) {
+  const pct = env.total > 0 ? (env.used / env.total) * 100 : 0;
+  const over = pct > 100;
+
+  return (
+    <div style={{
+      background: 'var(--card)', borderRadius: 20, padding: '14px 14px 12px',
+      boxShadow: 'var(--shadow-sm)',
+    }}>
+      {/* top row: emoji + label + used/total */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{
+          width: 40, height: 40, borderRadius: 14,
+          background: env.bg,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 20, flexShrink: 0,
+          boxShadow: `inset 0 -2px 0 ${env.color}33`,
+        }}>{env.emoji}</div>
+
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 600 }}>{env.label}</div>
+          <div style={{ fontSize: 11, color: over ? '#D86A8A' : 'var(--ink-soft)', marginTop: 1 }}>
+            已用 ${env.used.toLocaleString()} / 預算 ${env.total.toLocaleString()}
+            {over && <span> · 超支 ${(env.used - env.total).toLocaleString()}</span>}
+          </div>
+        </div>
+
+        {/* +/− budget buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <button onClick={() => onUpdate({ total: Math.max(0, env.total - 1000) })} className="tap" style={{
+            width: 28, height: 28, border: 'none', borderRadius: 8,
+            background: 'var(--bg)', color: 'var(--ink)', fontSize: 15, fontWeight: 700,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>−</button>
+          <span style={{
+            minWidth: 52, textAlign: 'center', fontSize: 13, fontWeight: 700,
+            color: 'var(--ink)', fontVariantNumeric: 'tabular-nums',
+          }}>
+            ${env.total >= 1000 ? `${(env.total / 1000).toFixed(env.total % 1000 ? 1 : 0)}k` : env.total}
+          </span>
+          <button onClick={() => onUpdate({ total: env.total + 1000 })} className="tap" style={{
+            width: 28, height: 28, border: 'none', borderRadius: 8,
+            background: 'var(--accent-faint)', color: 'var(--accent)', fontSize: 15, fontWeight: 700,
+            cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>＋</button>
+        </div>
+      </div>
+
+      {/* category chips row */}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
+        {env.cats.map(catId => {
+          const cat = CATEGORIES.find(c => c.id === catId);
+          if (!cat) return null;
+          return (
+            <div key={catId} style={{
+              padding: '3px 8px', borderRadius: 999,
+              background: cat.bg,
+              color: cat.color,
+              fontSize: 11, fontWeight: 600,
+              border: `1px solid ${cat.color}44`,
+            }}>
+              {cat.label}
+            </div>
+          );
+        })}
+        {/* add cat chip */}
+        <div className="tap" onClick={onAddCat} style={{
+          padding: '3px 8px', borderRadius: 999,
+          background: 'var(--bg)',
+          color: 'var(--ink-soft)',
+          fontSize: 11, fontWeight: 600,
+          border: '1px dashed #D5CCC4',
+          display: 'flex', alignItems: 'center', gap: 2,
+        }}>
+          <span style={{ fontSize: 12 }}>＋</span>
+        </div>
+      </div>
+
+      {/* progress bar */}
+      <div style={{ marginTop: 10, background: '#F5EBE4', height: 7, borderRadius: 4, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%', width: `${Math.min(pct, 100)}%`,
+          background: over ? '#D86A8A' : env.color,
+          borderRadius: 4, transition: 'width 0.3s',
+        }}/>
+      </div>
+
+      {/* vault toggle chip */}
+      <div
+        className="tap"
+        onClick={() => onUpdate({ vault: !env.vault })}
+        style={{
+          marginTop: 10, padding: '6px 10px', borderRadius: 12,
+          background: env.vault ? '#FFF1E8' : 'var(--bg)',
+          display: 'flex', alignItems: 'center', gap: 8,
+          border: `1px dashed ${env.vault ? '#FFD3B0' : '#E8DCD3'}`,
+          transition: 'all 0.15s',
+        }}>
+        <div style={{
+          width: 22, height: 22, borderRadius: 11,
+          background: env.vault ? 'linear-gradient(135deg, #FFE08A 0%, #FFB366 100%)' : '#D5CCC4',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          color: env.vault ? '#A85F00' : '#fff',
+          fontSize: 11, fontWeight: 700,
+          transition: 'all 0.15s',
+        }}>$</div>
+        <div style={{ flex: 1, fontSize: 11, color: 'var(--ink)' }}>
+          <b style={{ color: env.vault ? '#C5751F' : 'var(--ink-soft)' }}>
+            {env.vault ? '結餘進金庫' : '結餘合併下月'}
+          </b>
+          <span style={{ color: 'var(--ink-soft)' }}>
+            {' · 預估月底入 $'}{Math.max(0, env.total - env.used).toLocaleString()}
+          </span>
+        </div>
+        <span style={{ fontSize: 10, color: 'var(--ink-faint)' }}>切換</span>
+      </div>
     </div>
   );
 }
@@ -333,12 +477,12 @@ function CatPickerSheet({ existing, onPick, onClose }) {
           <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(74,58,53,0.2)' }}/>
         </div>
         <div style={{ padding: '10px 20px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>選擇分類</div>
+          <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>新增分類到信封</div>
           <span className="tap" onClick={onClose} style={{ fontSize: 14, color: 'var(--ink-soft)' }}>取消</span>
         </div>
         {available.length === 0 ? (
           <div style={{ padding: '20px', textAlign: 'center', fontSize: 13, color: 'var(--ink-faint)' }}>
-            所有分類都已加入預算了 ✿
+            所有分類都已加入信封了 ✿
           </div>
         ) : (
           <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -355,103 +499,6 @@ function CatPickerSheet({ existing, onPick, onClose }) {
           </div>
         )}
       </div>
-    </div>
-  );
-}
-
-function BudgetItem({ item, onChange }) {
-  const cat = CATEGORIES.find(c => c.id === item.id);
-  const pct = (item.used / item.total) * 100;
-  const over = pct > 100;
-  const warn = pct > 85;
-
-  return (
-    <div style={{
-      background: 'var(--card)', borderRadius: 18, padding: '12px 14px',
-      boxShadow: 'var(--shadow-sm)',
-      opacity: item.on ? 1 : 0.55,
-    }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <CatBubble id={item.id} size={38}/>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 600 }}>{cat?.label}</div>
-          <div style={{ fontSize: 11, color: over ? '#D86A8A' : 'var(--ink-soft)', marginTop: 1 }}>
-            已用 ${item.used.toLocaleString()} / 預算 ${item.total.toLocaleString()}
-            {over && <span> · 超支 ${item.used - item.total}</span>}
-          </div>
-        </div>
-
-        {/* +/- amount */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <button onClick={() => onChange('total', Math.max(0, item.total - 500))} className="tap" style={{
-            width: 26, height: 26, border: 'none', borderRadius: 8,
-            background: 'var(--bg)', color: 'var(--ink)', fontSize: 14, fontWeight: 700,
-            cursor: 'pointer',
-          }}>−</button>
-          <span style={{
-            minWidth: 56, textAlign: 'center', fontSize: 13, fontWeight: 700,
-            color: 'var(--ink)', fontVariantNumeric: 'tabular-nums',
-          }}>${item.total >= 1000 ? `${(item.total / 1000).toFixed(item.total % 1000 ? 1 : 0)}k` : item.total}</span>
-          <button onClick={() => onChange('total', item.total + 500)} className="tap" style={{
-            width: 26, height: 26, border: 'none', borderRadius: 8,
-            background: 'var(--accent-faint)', color: 'var(--accent)', fontSize: 14, fontWeight: 700,
-            cursor: 'pointer',
-          }}>＋</button>
-          {/* on/off */}
-          <div onClick={() => onChange('on', !item.on)} className="tap" style={{
-            marginLeft: 6, width: 32, height: 18, borderRadius: 9,
-            background: item.on ? '#7DCBA8' : '#D5CCC4',
-            position: 'relative', transition: 'background 0.15s',
-          }}>
-            <div style={{
-              position: 'absolute', top: 2, left: item.on ? 16 : 2,
-              width: 14, height: 14, borderRadius: 7, background: '#fff',
-              boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 0.15s',
-            }}/>
-          </div>
-        </div>
-      </div>
-
-      {/* bar */}
-      <div style={{ marginTop: 10, background: '#F5EBE4', height: 6, borderRadius: 3, overflow: 'hidden' }}>
-        <div style={{
-          height: '100%', width: `${Math.min(pct, 100)}%`,
-          background: over ? '#D86A8A' : warn ? 'var(--secondary)' : cat.color,
-          borderRadius: 3, transition: 'width 0.3s',
-        }}/>
-      </div>
-
-      {/* vault toggle — chip that flips between two modes */}
-      {item.on && (
-        <div
-          className="tap"
-          onClick={() => onChange('vault', !item.vault)}
-          style={{
-            marginTop: 10, padding: '6px 10px', borderRadius: 12,
-            background: item.vault ? '#FFF1E8' : 'var(--bg)',
-            display: 'flex', alignItems: 'center', gap: 8,
-            border: `1px dashed ${item.vault ? '#FFD3B0' : '#E8DCD3'}`,
-            transition: 'all 0.15s',
-          }}>
-          <div style={{
-            width: 22, height: 22, borderRadius: 11,
-            background: item.vault ? 'linear-gradient(135deg, #FFE08A 0%, #FFB366 100%)' : '#D5CCC4',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            color: item.vault ? '#A85F00' : '#fff',
-            fontSize: 11, fontWeight: 700,
-            transition: 'all 0.15s',
-          }}>$</div>
-          <div style={{ flex: 1, fontSize: 11, color: 'var(--ink)' }}>
-            <b style={{ color: item.vault ? '#C5751F' : 'var(--ink-soft)' }}>
-              {item.vault ? '結餘進金庫' : '結餘合併下月'}
-            </b>
-            <span style={{ color: 'var(--ink-soft)' }}>
-              {' · 預估月底入 $'}{Math.max(0, item.total - item.used).toLocaleString()}
-            </span>
-          </div>
-          <span style={{ fontSize: 10, color: 'var(--ink-faint)' }}>切換</span>
-        </div>
-      )}
     </div>
   );
 }
