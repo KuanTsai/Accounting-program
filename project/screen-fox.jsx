@@ -117,7 +117,7 @@ function FoxScreen({ foxState, setFoxState, onClose, onExpGain, transactions = [
       dayMap[key].txs.push(tx);
     });
     const events = [];
-    Object.values(dayMap).sort((a, b) => b.date - a.date).slice(0, 4).forEach(({ date, txs }) => {
+    Object.values(dayMap).sort((a, b) => b.date - a.date).slice(0, 3).forEach(({ date, txs }) => {
       const ds = date.toDateString();
       const label = ds === todayStr ? '今天' : ds === yesterdayStr ? '昨天' : `${Math.round((now - date) / 86400000)} 天前`;
       const hasDiary = txs.some(t => t.diary);
@@ -127,6 +127,12 @@ function FoxScreen({ foxState, setFoxState, onClose, onExpGain, transactions = [
       );
     });
     if (streak >= 7) events.push({ date: `第 ${streak} 天`, text: '連續記帳，繼續保持 ✿', color: '#7DCBA8' });
+    if (foxState.joinedAt) {
+      const joinDate = new Date(foxState.joinedAt);
+      const joinDs = joinDate.toDateString();
+      const joinLabel = joinDs === todayStr ? '今天' : joinDs === yesterdayStr ? '昨天' : `${Math.round((now - joinDate) / 86400000)} 天前`;
+      events.push({ date: joinLabel, text: `${foxState.name || '小桃'} 和你第一次相遇 🌸`, color: '#FFD66B' });
+    }
     return events;
   })();
 

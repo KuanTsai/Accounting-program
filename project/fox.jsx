@@ -21,23 +21,10 @@ function Fox({ mood = 'happy', size = 120, fur = 'orange', accessory = 'none' })
   );
 }
 
-// tiny icon fox — kept as SVG for small badge/chip use
 function FoxMini({ size = 28 }) {
-  const FUR = '#F5A968';
-  const CREAM = '#FFF1E0';
-  const NOSE = '#3D2820';
   return (
-    <svg width={size} height={size} viewBox="0 0 32 32">
-      <path d="M 4 9 L 8 3 L 12 10 Z" fill={FUR}/>
-      <path d="M 28 9 L 24 3 L 20 10 Z" fill={FUR}/>
-      <circle cx="16" cy="17" r="11" fill={FUR}/>
-      <ellipse cx="11" cy="20" rx="4" ry="3.5" fill={CREAM}/>
-      <ellipse cx="21" cy="20" rx="4" ry="3.5" fill={CREAM}/>
-      <ellipse cx="16" cy="24" rx="6" ry="3" fill={CREAM}/>
-      <circle cx="12.5" cy="17" r="1.3" fill={NOSE}/>
-      <circle cx="19.5" cy="17" r="1.3" fill={NOSE}/>
-      <ellipse cx="16" cy="20.5" rx="1.2" ry="1" fill={NOSE}/>
-    </svg>
+    <img src="icons/icon-192.png" width={size} height={size} draggable={false}
+      style={{ objectFit: 'contain', display: 'block', flexShrink: 0 }}/>
   );
 }
 

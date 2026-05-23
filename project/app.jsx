@@ -663,13 +663,14 @@ function App() {
           <OnboardingScreen
             onFinish={(data) => {
               const { budget, pickedCats, ...fox } = data;
-              setFoxState(s => ({ ...s, ...fox }));
+              const joinedAt = Date.now();
+              setFoxState(s => ({ ...s, ...fox, joinedAt }));
               try { localStorage.setItem('onboardingDone', '1'); } catch {}
               setShowOnboarding(false);
               if (user) {
                 const uid = user.uid;
                 // Save fox profile to Firestore
-                window.db.collection('users').doc(uid).collection('settings').doc('profile').set(fox);
+                window.db.collection('users').doc(uid).collection('settings').doc('profile').set({ ...fox, joinedAt });
                 // Build budget from picked categories (equal split, round to 500)
                 const perCat = pickedCats.length > 0
                   ? Math.round(budget / pickedCats.length / 500) * 500
