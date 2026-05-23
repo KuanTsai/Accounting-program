@@ -48,16 +48,6 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
         subtitle="Today is a lovely day ✿"
         right={
         <div style={{ display: 'flex', gap: 8 }}>
-            <div className="tap" onClick={onOpenPalette} style={{
-            width: 38, height: 38, borderRadius: 12,
-            background: 'var(--card)', display: 'flex', alignItems: 'center', justifyContent: 'center',
-            boxShadow: 'var(--shadow-sm)'
-          }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2">
-                <circle cx="12" cy="12" r="3" />
-                <path d="M12 1v6m0 10v6M4.22 4.22l4.24 4.24m7.07 7.07l4.24 4.24M1 12h6m10 0h6M4.22 19.78l4.24-4.24m7.07-7.07l4.24-4.24" />
-              </svg>
-            </div>
             <div className="tap" onClick={onOpenSettings} style={{
             width: 38, height: 38, borderRadius: 12,
             background: 'var(--card)', display: 'flex', alignItems: 'center', justifyContent: 'center',

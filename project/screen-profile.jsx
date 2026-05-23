@@ -1,6 +1,8 @@
 // Profile / Me screen
 
-function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox, foxState = {}, transactions = [], budgetItems = [], goalPots = [], autoPots = [], liveData = {} }) {
+const PALETTE_LABELS = { sakura: '櫻花', mint: '薄荷', lavender: '薰衣草', peach: '蜜桃', navy: '夜空' };
+
+function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox, onOpenPalette, onOpenSettings, palette = 'sakura', foxState = {}, transactions = [], budgetItems = [], goalPots = [], autoPots = [], liveData = {} }) {
   const now = new Date();
 
   // ── budget stats ──────────────────────────────────────
@@ -49,7 +51,7 @@ function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox,
         title="我的"
         subtitle="Hello, sweet pea ♥"
         right={
-          <div className="tap" style={{
+          <div className="tap" onClick={onOpenSettings} style={{
             width: 38, height: 38, borderRadius: 12, background: '#fff',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: 'var(--shadow-sm)',
@@ -242,6 +244,7 @@ function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox,
         <div className="hand" style={{ fontSize: 20, color: 'var(--ink)', marginBottom: 10 }}>偏好設定</div>
         <div style={{ background: 'var(--card)', borderRadius: 24, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
           {[
+            { id: 'theme',   label: '主題色',       value: PALETTE_LABELS[palette] || '櫻花',  color: '#EEE8FF', icon: 'beauty', onClick: onOpenPalette },
             { id: 'cat',     label: '分類管理',     value: '管理分類',                         color: '#FFE5EC', icon: 'shop',   onClick: onOpenCategories },
             { id: 'budget',  label: '預算管理',     value: budgetTotal > 0 ? `$${budgetTotal.toLocaleString()}` : '未設定', color: '#E2F4E8', icon: 'salary', onClick: onOpenBudget },
             { id: 'vault',   label: '我的金庫',     value: `NT$${vaultTotal.toLocaleString()}`, color: '#FFF4D1', icon: 'travel', onClick: onOpenVault },
