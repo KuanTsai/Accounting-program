@@ -16,8 +16,9 @@ function BudgetScreen({ onClose, transactions = [] }) {
   const [total, setTotal] = useStateBudget(20000);
   const [warnAt, setWarnAt] = useStateBudget(80);
   const [remindOn, setRemindOn] = useStateBudget(true);
-  const [items, setItems] = useStateBudget(null); // null = loading
+    const [items, setItems] = useStateBudget(null); // null = loading
   const [saving, setSaving] = useStateBudget(false);
+  const [addingCat, setAddingCat] = useStateBudget(false);
 
   // Load budget settings from Firestore
   useEffectBudget(() => {
@@ -30,7 +31,7 @@ function BudgetScreen({ onClose, transactions = [] }) {
         if (d.total)   setTotal(d.total);
         if (d.warnAt)  setWarnAt(d.warnAt);
         if (d.remindOn !== undefined) setRemindOn(d.remindOn);
-        setItems(d.items || DEFAULT_ITEMS);
+        setItems(d.items && d.items.length > 0 ? d.items : DEFAULT_ITEMS);
       })
       .catch(() => setItems(DEFAULT_ITEMS));
   }, []);
@@ -233,7 +234,7 @@ function BudgetScreen({ onClose, transactions = [] }) {
             ))}
 
             {/* add new */}
-            <div className="tap dashed-border" style={{
+            <div className="tap dashed-border" onClick={() => setAddingCat(true)} style={{
               padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
               background: 'rgba(255,255,255,0.5)',
             }}>
@@ -295,6 +296,61 @@ function BudgetScreen({ onClose, transactions = [] }) {
             </span>
           </div>
         </div>
+      </div>
+
+      {addingCat && (
+        <CatPickerSheet
+          existing={items.map(i => i.id)}
+          onPick={(id) => {
+            setItems(prev => [...prev, { id, total: 1000, on: true, vault: true }]);
+            setAddingCat(false);
+          }}
+          onClose={() => setAddingCat(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function CatPickerSheet({ existing, onPick, onClose }) {
+  const available = CATEGORIES.filter(c => !existing.includes(c.id) && c.id !== 'salary');
+  return (
+    <div style={{
+      position: 'absolute', inset: 0, zIndex: 78,
+      background: 'rgba(74,58,53,0.35)', backdropFilter: 'blur(4px)',
+      display: 'flex', flexDirection: 'column', justifyContent: 'flex-end',
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        background: 'var(--bg)', borderRadius: '28px 28px 0 0',
+        maxHeight: '70%', overflowY: 'auto',
+        animation: 'slide-up 0.28s cubic-bezier(.3,.7,.4,1)',
+        paddingBottom: 24,
+      }}>
+        <div style={{ display: 'flex', justifyContent: 'center', paddingTop: 8 }}>
+          <div style={{ width: 40, height: 4, borderRadius: 2, background: 'rgba(74,58,53,0.2)' }}/>
+        </div>
+        <div style={{ padding: '10px 20px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>選擇分類</div>
+          <span className="tap" onClick={onClose} style={{ fontSize: 14, color: 'var(--ink-soft)' }}>取消</span>
+        </div>
+        {available.length === 0 ? (
+          <div style={{ padding: '20px', textAlign: 'center', fontSize: 13, color: 'var(--ink-faint)' }}>
+            所有分類都已加入預算了 ✿
+          </div>
+        ) : (
+          <div style={{ padding: '0 20px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+            {available.map(c => (
+              <div key={c.id} className="tap" onClick={() => onPick(c.id)} style={{
+                display: 'flex', alignItems: 'center', gap: 12,
+                padding: '10px 12px', borderRadius: 14,
+                background: 'var(--card)',
+              }}>
+                <CatBubble id={c.id} size={38}/>
+                <span style={{ fontSize: 15, color: 'var(--ink)', fontWeight: 600 }}>{c.label}</span>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
