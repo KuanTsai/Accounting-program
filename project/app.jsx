@@ -791,7 +791,7 @@ function App() {
         {showOnboarding && (
           <OnboardingScreen
             onFinish={(data) => {
-              const { budget, pickedCats, ...fox } = data;
+              const { budget, pickedEnvs, ...fox } = data;
               const joinedAt = Date.now();
               setFoxState(s => ({ ...s, ...fox, joinedAt }));
               try { localStorage.setItem('onboardingDone', '1'); } catch {}
@@ -799,8 +799,18 @@ function App() {
               if (user) {
                 const uid = user.uid;
                 window.db.collection('users').doc(uid).collection('settings').doc('profile').set({ ...fox, joinedAt });
+                const allEnvs = window.DEFAULT_ENVELOPES || [];
+                const defaultTotal = allEnvs.reduce((s, e) => s + e.total, 0);
+                const savedEnvelopes = allEnvs
+                  .filter(env => !pickedEnvs || pickedEnvs.includes(env.id))
+                  .map(env => ({
+                    ...env,
+                    total: defaultTotal > 0
+                      ? Math.round(budget * (env.total / defaultTotal) / 500) * 500
+                      : env.total,
+                  }));
                 window.db.collection('users').doc(uid).collection('settings').doc('budget').set({
-                  total: budget, warnAt: 80, remindOn: true, envelopes: window.DEFAULT_ENVELOPES || [],
+                  total: budget, warnAt: 80, remindOn: true, envelopes: savedEnvelopes,
                 });
               }
             }}

@@ -26,7 +26,8 @@ function OnboardingScreen({ onFinish }) {
   const [fur, setFur] = useStateOnb('orange');
   const [accessory, setAccessory] = useStateOnb('bow');
   const [budget, setBudget] = useStateOnb(20000);
-  const [pickedCats, setPickedCats] = useStateOnb(['food', 'shop', 'fun', 'drink', 'transport']);
+  const defaultEnvIds = (window.DEFAULT_ENVELOPES || []).map(e => e.id);
+  const [pickedEnvs, setPickedEnvs] = useStateOnb(defaultEnvIds);
 
   const finalName = name.trim() || '小桃';
 
@@ -34,7 +35,7 @@ function OnboardingScreen({ onFinish }) {
     onFinish({
       name: finalName, fur, accessory, level: 1, exp: 0, days: 1,
       satiety: 80, energy: 80, moodScore: 90, mood: 'happy',
-      budget, pickedCats,
+      budget, pickedEnvs,
     });
   };
 
@@ -44,7 +45,7 @@ function OnboardingScreen({ onFinish }) {
     { title: '選毛色', component: FurStep },
     { title: '挑配件', component: AccessoryStep },
     { title: '設預算', component: BudgetStep },
-    { title: '選分類', component: CategoryStep },
+    { title: '選信封', component: EnvelopeStep },
     { title: '完成', component: DoneStep },
   ];
   const Step = steps[step].component;
@@ -82,7 +83,7 @@ function OnboardingScreen({ onFinish }) {
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px' }}>
         <Step {...{
           name, setName, fur, setFur, accessory, setAccessory,
-          budget, setBudget, pickedCats, setPickedCats, finalName,
+          budget, setBudget, pickedEnvs, setPickedEnvs, finalName,
         }}/>
       </div>
 
@@ -131,13 +132,14 @@ function WelcomeStep() {
       }}>
         {[
           { icon: '🦊', t: '一隻屬於你的狐狸', s: '陪你度過每個記帳的日子' },
-          { icon: '🪙', t: '可愛的小金庫', s: '把省下的錢分類存起來' },
+          { icon: '✉️', t: '信封預算管理', s: '把錢分配到不同信封，花到哪看到哪' },
+          { icon: '🪙', t: '可愛的小金庫', s: '每月省下的錢自動存進來' },
           { icon: '✍️', t: '記帳順便寫日記', s: '心情和支出一起記錄' },
         ].map((f, i) => (
           <div key={i} style={{
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '8px 0',
-            borderBottom: i < 2 ? '1px dashed #F5E5DC' : 'none',
+            borderBottom: i < 3 ? '1px dashed #F5E5DC' : 'none',
           }}>
             <div style={{ fontSize: 22, width: 30, textAlign: 'center' }}>{f.icon}</div>
             <div style={{ flex: 1 }}>
@@ -325,69 +327,86 @@ function BudgetStep({ budget, setBudget, fur, accessory }) {
   );
 }
 
-function CategoryStep({ pickedCats, setPickedCats }) {
-  const toggle = (id) => {
-    setPickedCats(pickedCats.includes(id)
-      ? pickedCats.filter(c => c !== id)
-      : [...pickedCats, id]);
-  };
+function EnvelopeStep({ budget, pickedEnvs, setPickedEnvs }) {
+  const allEnvs = window.DEFAULT_ENVELOPES || [];
+  const defaultTotal = allEnvs.reduce((s, e) => s + e.total, 0);
+
+  const envAmt = (env) =>
+    defaultTotal > 0 ? Math.round(budget * (env.total / defaultTotal) / 500) * 500 : env.total;
+
+  const catLabel = (catId) => (CATEGORIES.find(c => c.id === catId) || {}).label || catId;
+
+  const toggle = (id) => setPickedEnvs(prev =>
+    prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
+  );
+
+  const pickedTotal = allEnvs
+    .filter(e => pickedEnvs.includes(e.id))
+    .reduce((s, e) => s + envAmt(e), 0);
+
   return (
-    <div style={{ textAlign: 'center', paddingTop: 10 }}>
-      <div className="hand" style={{ fontSize: 26, color: 'var(--ink)', marginTop: 10 }}>
-        你常花在哪些地方？
+    <div style={{ paddingTop: 10 }}>
+      <div className="hand" style={{ fontSize: 26, color: 'var(--ink)', textAlign: 'center' }}>
+        選擇你的信封 ✉️
       </div>
-      <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4 }}>
-        選 3-6 個常用分類，之後還能改
+      <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4, textAlign: 'center', lineHeight: 1.6 }}>
+        把每月預算分配到不同信封，<br/>記帳時選信封就能看到花了多少
       </div>
 
-      <div style={{
-        marginTop: 20,
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10,
-      }}>
-        {CATEGORIES.filter(c => c.id !== 'salary').map(c => {
-          const sel = pickedCats.includes(c.id);
+      <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {allEnvs.map(env => {
+          const sel = pickedEnvs.includes(env.id);
+          const amt = envAmt(env);
           return (
-            <div key={c.id} className="tap" onClick={() => toggle(c.id)} style={{
-              cursor: 'pointer',
-              background: sel ? c.bg : 'rgba(255,255,255,0.7)',
-              border: sel ? `2px solid ${c.color}` : '2px solid transparent',
-              borderRadius: 16, padding: '12px 0 8px',
-              textAlign: 'center', transition: 'all 0.15s',
-              position: 'relative',
+            <div key={env.id} className="tap" onClick={() => toggle(env.id)} style={{
+              background: sel ? env.bg : 'rgba(255,255,255,0.6)',
+              borderRadius: 16, padding: '12px 14px',
+              border: `2px solid ${sel ? env.color : 'transparent'}`,
+              display: 'flex', alignItems: 'center', gap: 12,
+              transition: 'all 0.15s',
             }}>
-              <CatBubble id={c.id} size={36}/>
-              <div style={{ fontSize: 12, color: 'var(--ink)', marginTop: 4, fontWeight: sel ? 700 : 500 }}>
-                {c.label}
+              <div style={{ fontSize: 24, width: 34, textAlign: 'center', flexShrink: 0 }}>{env.emoji}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>{env.label}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: sel ? env.color : 'var(--ink-faint)', fontVariantNumeric: 'tabular-nums' }}>
+                    ${amt.toLocaleString()}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 3 }}>
+                  {(env.cats || []).map(c => catLabel(c)).join('・')}
+                </div>
               </div>
-              {sel && (
-                <div style={{
-                  position: 'absolute', top: 4, right: 4,
-                  width: 16, height: 16, borderRadius: 8,
-                  background: c.color, color: '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontWeight: 700,
-                }}>✓</div>
-              )}
+              <div style={{
+                width: 22, height: 22, borderRadius: 11, flexShrink: 0,
+                background: sel ? env.color : 'rgba(0,0,0,0.08)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 12, fontWeight: 700,
+                transition: 'all 0.15s',
+              }}>{sel ? '✓' : ''}</div>
             </div>
           );
         })}
       </div>
 
       <div style={{
-        marginTop: 16, padding: '10px 14px',
+        marginTop: 14, padding: '10px 14px',
         background: 'rgba(255,255,255,0.7)', borderRadius: 14,
-        fontSize: 12, color: 'var(--ink)',
+        fontSize: 12, color: 'var(--ink)', textAlign: 'center',
       }}>
-        已選 <b style={{ color: 'var(--accent)' }}>{pickedCats.length}</b> 個 ♥
+        已選 <b style={{ color: 'var(--accent)' }}>{pickedEnvs.length}</b> 個信封，
+        合計 <b style={{ color: 'var(--ink)' }}>${pickedTotal.toLocaleString()}</b> / 月
       </div>
     </div>
   );
 }
 
-function DoneStep({ fur, accessory, finalName, budget }) {
+function DoneStep({ fur, accessory, finalName, budget, pickedEnvs }) {
+  const allEnvs = window.DEFAULT_ENVELOPES || [];
+  const selected = allEnvs.filter(e => pickedEnvs.includes(e.id));
+
   return (
     <div style={{ textAlign: 'center', paddingTop: 20, position: 'relative' }}>
-      {/* sparkles */}
       {[
         { l: '8%', t: '0%' }, { l: '88%', t: '8%' },
         { l: '16%', t: '24%' }, { l: '82%', t: '30%' },
@@ -400,7 +419,7 @@ function DoneStep({ fur, accessory, finalName, budget }) {
       ))}
 
       <div className="wiggle" style={{ display: 'inline-block' }}>
-        <Fox mood="celebrate" size={160} fur={fur} accessory={accessory}/>
+        <Fox mood="celebrate" size={150} fur={fur} accessory={accessory}/>
       </div>
       <div className="hand" style={{ fontSize: 30, color: 'var(--ink)', marginTop: 16 }}>
         我們都準備好了！
@@ -410,12 +429,26 @@ function DoneStep({ fur, accessory, finalName, budget }) {
       </div>
 
       <div style={{
-        marginTop: 24, padding: '14px 18px',
+        marginTop: 20, padding: '14px 18px',
         background: 'rgba(255,255,255,0.85)', borderRadius: 18,
         boxShadow: 'var(--shadow-sm)', textAlign: 'left',
       }}>
         <SummaryRow icon="🦊" label="狐狸" value={finalName}/>
         <SummaryRow icon="💰" label="月預算" value={`NT$ ${budget.toLocaleString()}`}/>
+        <div style={{ padding: '8px 0', borderTop: '1px dashed #F5E5DC' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ fontSize: 18, width: 28, textAlign: 'center' }}>✉️</div>
+            <div style={{ fontSize: 13, color: 'var(--ink-soft)' }}>信封預算</div>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingLeft: 38 }}>
+            {selected.map(env => (
+              <span key={env.id} style={{
+                fontSize: 12, padding: '3px 10px', borderRadius: 999,
+                background: env.bg, color: env.color, fontWeight: 700,
+              }}>{env.emoji} {env.label}</span>
+            ))}
+          </div>
+        </div>
         <SummaryRow icon="✨" label="等級" value="Lv. 1（剛起步！）" last/>
       </div>
     </div>
