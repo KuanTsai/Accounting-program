@@ -255,6 +255,7 @@ function BudgetScreen({ onClose, transactions = [] }) {
                 env={env}
                 onUpdate={(patch) => updateEnvelope(env.id, patch)}
                 onAddCat={() => setAddingCatTo(env.id)}
+                onDelete={() => setEnvelopes(prev => prev.filter(e => e.id !== env.id))}
               />
             ))}
 
@@ -339,24 +340,58 @@ function BudgetScreen({ onClose, transactions = [] }) {
   );
 }
 
-function EnvelopeCard({ env, onUpdate, onAddCat }) {
+const ENVELOPE_EMOJIS = ['🧺','🎮','📈','🏠','🛡️','🛒','🍕','✈️','💊','🎓','💼','🎁','🏋️','🎵','🏡','👗','☕','📦','💻','🎨'];
+const ENVELOPE_COLORS = [
+  { color: '#FF8FAB', bg: '#FFE5EC' },
+  { color: '#FFD66B', bg: '#FFF4D1' },
+  { color: '#7DCBA8', bg: '#D8F0E2' },
+  { color: '#A8D8F0', bg: '#E0F2FA' },
+  { color: '#C9B8F0', bg: '#EFE9FF' },
+  { color: '#FFB97A', bg: '#FFE9D6' },
+  { color: '#F590BB', bg: '#FFE0EE' },
+  { color: '#9DD6B0', bg: '#E2F4E8' },
+];
+
+function EnvelopeCard({ env, onUpdate, onAddCat, onDelete }) {
+  const [editOpen, setEditOpen] = useStateBudget(false);
+  const [amtEditing, setAmtEditing] = useStateBudget(false);
+  const [amtRaw, setAmtRaw] = useStateBudget('');
+
   const pct = env.total > 0 ? (env.used / env.total) * 100 : 0;
   const over = pct > 100;
 
+  const startAmtEdit = () => { setAmtRaw(String(env.total)); setAmtEditing(true); };
+  const commitAmt = () => {
+    const n = parseInt(amtRaw.replace(/[^0-9]/g, ''), 10);
+    if (!isNaN(n) && n >= 0) onUpdate({ total: n });
+    setAmtEditing(false);
+  };
+
   return (
-    <div style={{
-      background: 'var(--card)', borderRadius: 20, padding: '14px 14px 12px',
-      boxShadow: 'var(--shadow-sm)',
-    }}>
-      {/* top row: emoji + label + used/total */}
+    <div style={{ background: 'var(--card)', borderRadius: 20, padding: '14px 14px 12px', boxShadow: 'var(--shadow-sm)' }}>
+      {/* top row */}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div style={{
+        {/* emoji → tap to open edit panel */}
+        <div className="tap" onClick={() => setEditOpen(e => !e)} style={{
           width: 40, height: 40, borderRadius: 14,
           background: env.bg,
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           fontSize: 20, flexShrink: 0,
           boxShadow: `inset 0 -2px 0 ${env.color}33`,
-        }}>{env.emoji}</div>
+          position: 'relative',
+        }}>
+          {env.emoji}
+          <div style={{
+            position: 'absolute', bottom: -3, right: -3,
+            width: 15, height: 15, borderRadius: 8,
+            background: editOpen ? 'var(--accent)' : 'rgba(74,58,53,0.18)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <svg width="7" height="7" viewBox="0 0 10 10" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M7 1l2 2-6 6H1V7z"/>
+            </svg>
+          </div>
+        </div>
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 600 }}>{env.label}</div>
@@ -366,49 +401,124 @@ function EnvelopeCard({ env, onUpdate, onAddCat }) {
           </div>
         </div>
 
-        {/* +/− budget buttons */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-          <button onClick={() => onUpdate({ total: Math.max(0, env.total - 1000) })} className="tap" style={{
-            width: 28, height: 28, border: 'none', borderRadius: 8,
+        {/* amount controls: ±500 or tap to type */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+          <button onClick={() => onUpdate({ total: Math.max(0, env.total - 500) })} className="tap" style={{
+            width: 26, height: 26, border: 'none', borderRadius: 8,
             background: 'var(--bg)', color: 'var(--ink)', fontSize: 15, fontWeight: 700,
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>−</button>
-          <span style={{
-            minWidth: 52, textAlign: 'center', fontSize: 13, fontWeight: 700,
-            color: 'var(--ink)', fontVariantNumeric: 'tabular-nums',
-          }}>
-            ${env.total >= 1000 ? `${(env.total / 1000).toFixed(env.total % 1000 ? 1 : 0)}k` : env.total}
-          </span>
-          <button onClick={() => onUpdate({ total: env.total + 1000 })} className="tap" style={{
-            width: 28, height: 28, border: 'none', borderRadius: 8,
+          {amtEditing ? (
+            <input
+              type="number"
+              value={amtRaw}
+              onChange={e => setAmtRaw(e.target.value)}
+              onBlur={commitAmt}
+              onKeyDown={e => e.key === 'Enter' && commitAmt()}
+              autoFocus
+              style={{
+                width: 64, textAlign: 'center', fontSize: 13, fontWeight: 700,
+                border: '1.5px solid var(--accent)', borderRadius: 8,
+                padding: '3px 4px', outline: 'none', background: '#fff',
+                color: 'var(--ink)', fontFamily: 'inherit',
+              }}
+            />
+          ) : (
+            <span className="tap" onClick={startAmtEdit} style={{
+              minWidth: 52, textAlign: 'center', fontSize: 13, fontWeight: 700,
+              color: 'var(--ink)', fontVariantNumeric: 'tabular-nums',
+              padding: '3px 4px', borderRadius: 6, background: 'var(--bg)',
+            }}>
+              ${env.total >= 1000 ? `${(env.total / 1000).toFixed(env.total % 1000 ? 1 : 0)}k` : env.total}
+            </span>
+          )}
+          <button onClick={() => onUpdate({ total: env.total + 500 })} className="tap" style={{
+            width: 26, height: 26, border: 'none', borderRadius: 8,
             background: 'var(--accent-faint)', color: 'var(--accent)', fontSize: 15, fontWeight: 700,
             cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
           }}>＋</button>
         </div>
       </div>
 
-      {/* category chips row */}
+      {/* edit panel */}
+      {editOpen && (
+        <div style={{ marginTop: 12, padding: '12px', background: 'var(--bg)', borderRadius: 14, animation: 'pop-in 0.2s ease-out' }}>
+          {/* name */}
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: 'var(--ink-soft)', fontWeight: 600, marginBottom: 5 }}>信封名稱</div>
+            <input
+              value={env.label}
+              onChange={e => onUpdate({ label: e.target.value })}
+              maxLength={8}
+              style={{
+                width: '100%', boxSizing: 'border-box',
+                padding: '8px 12px', borderRadius: 10,
+                border: '1.5px solid var(--accent-soft)',
+                fontSize: 14, color: 'var(--ink)', fontWeight: 600,
+                outline: 'none', background: '#fff', fontFamily: 'inherit',
+              }}
+            />
+          </div>
+          {/* emoji */}
+          <div style={{ marginBottom: 10 }}>
+            <div style={{ fontSize: 11, color: 'var(--ink-soft)', fontWeight: 600, marginBottom: 6 }}>圖示</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {ENVELOPE_EMOJIS.map(em => (
+                <div key={em} className="tap" onClick={() => onUpdate({ emoji: em })} style={{
+                  width: 36, height: 36, borderRadius: 10,
+                  background: env.emoji === em ? env.bg : 'rgba(0,0,0,0.04)',
+                  border: `2px solid ${env.emoji === em ? env.color : 'transparent'}`,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: 18, transition: 'all 0.12s',
+                }}>{em}</div>
+              ))}
+            </div>
+          </div>
+          {/* color */}
+          <div style={{ marginBottom: 12 }}>
+            <div style={{ fontSize: 11, color: 'var(--ink-soft)', fontWeight: 600, marginBottom: 6 }}>顏色</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {ENVELOPE_COLORS.map((c, i) => (
+                <div key={i} className="tap" onClick={() => onUpdate({ color: c.color, bg: c.bg })} style={{
+                  width: 28, height: 28, borderRadius: 14, background: c.color,
+                  boxShadow: env.color === c.color
+                    ? `0 0 0 2.5px #fff, 0 0 0 4.5px ${c.color}`
+                    : '0 1px 3px rgba(0,0,0,0.12)',
+                  transition: 'all 0.12s',
+                }}/>
+              ))}
+            </div>
+          </div>
+          {/* delete */}
+          <div className="tap" onClick={onDelete} style={{
+            padding: '9px', borderRadius: 10,
+            background: '#FFF0F0', border: '1px solid #FFD5D5',
+            color: '#E05A5A', fontSize: 13, fontWeight: 600, textAlign: 'center',
+          }}>🗑 刪除這個信封</div>
+        </div>
+      )}
+
+      {/* category chips — tap × to remove */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 10 }}>
         {env.cats.map(catId => {
           const cat = CATEGORIES.find(c => c.id === catId);
           if (!cat) return null;
           return (
-            <div key={catId} style={{
+            <div key={catId} className="tap" onClick={() => onUpdate({ cats: env.cats.filter(c => c !== catId) })} style={{
               padding: '3px 8px', borderRadius: 999,
-              background: cat.bg,
-              color: cat.color,
+              background: cat.bg, color: cat.color,
               fontSize: 11, fontWeight: 600,
               border: `1px solid ${cat.color}44`,
+              display: 'flex', alignItems: 'center', gap: 3,
             }}>
               {cat.label}
+              <span style={{ fontSize: 10, opacity: 0.55 }}>×</span>
             </div>
           );
         })}
-        {/* add cat chip */}
         <div className="tap" onClick={onAddCat} style={{
           padding: '3px 8px', borderRadius: 999,
-          background: 'var(--bg)',
-          color: 'var(--ink-soft)',
+          background: 'var(--bg)', color: 'var(--ink-soft)',
           fontSize: 11, fontWeight: 600,
           border: '1px dashed #D5CCC4',
           display: 'flex', alignItems: 'center', gap: 2,
@@ -426,24 +536,20 @@ function EnvelopeCard({ env, onUpdate, onAddCat }) {
         }}/>
       </div>
 
-      {/* vault toggle chip */}
-      <div
-        className="tap"
-        onClick={() => onUpdate({ vault: !env.vault })}
-        style={{
-          marginTop: 10, padding: '6px 10px', borderRadius: 12,
-          background: env.vault ? '#FFF1E8' : 'var(--bg)',
-          display: 'flex', alignItems: 'center', gap: 8,
-          border: `1px dashed ${env.vault ? '#FFD3B0' : '#E8DCD3'}`,
-          transition: 'all 0.15s',
-        }}>
+      {/* vault toggle */}
+      <div className="tap" onClick={() => onUpdate({ vault: !env.vault })} style={{
+        marginTop: 10, padding: '6px 10px', borderRadius: 12,
+        background: env.vault ? '#FFF1E8' : 'var(--bg)',
+        display: 'flex', alignItems: 'center', gap: 8,
+        border: `1px dashed ${env.vault ? '#FFD3B0' : '#E8DCD3'}`,
+        transition: 'all 0.15s',
+      }}>
         <div style={{
           width: 22, height: 22, borderRadius: 11,
           background: env.vault ? 'linear-gradient(135deg, #FFE08A 0%, #FFB366 100%)' : '#D5CCC4',
           display: 'flex', alignItems: 'center', justifyContent: 'center',
           color: env.vault ? '#A85F00' : '#fff',
-          fontSize: 11, fontWeight: 700,
-          transition: 'all 0.15s',
+          fontSize: 11, fontWeight: 700, transition: 'all 0.15s',
         }}>$</div>
         <div style={{ flex: 1, fontSize: 11, color: 'var(--ink)' }}>
           <b style={{ color: env.vault ? '#C5751F' : 'var(--ink-soft)' }}>
