@@ -237,6 +237,57 @@ function PaletteRadio({ value, onChange }) {
 
 // ─── settings bottom sheet ─────────────────────────────
 function SettingsSheet({ user, onLogout, onClose }) {
+  const [phase, setPhase] = useStateApp(null); // null | 'clearData' | 'deleteAccount'
+  const [working, setWorking] = useStateApp(false);
+  const [error, setError] = useStateApp(null);
+
+  const deleteCol = async (uid, col) => {
+    const snap = await window.db.collection('users').doc(uid).collection(col).get();
+    if (snap.empty) return;
+    for (let i = 0; i < snap.docs.length; i += 400) {
+      const batch = window.db.batch();
+      snap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+  };
+
+  const wipeData = async () => {
+    const uid = user.uid;
+    for (const col of ['transactions', 'goals', 'autopots', 'closes', 'settings']) {
+      await deleteCol(uid, col);
+    }
+    try { localStorage.removeItem('onboardingDone'); localStorage.removeItem('foxState'); } catch {}
+  };
+
+  const handleClearData = async () => {
+    if (working) return;
+    setWorking(true); setError(null);
+    try {
+      await wipeData();
+      onLogout();
+    } catch {
+      setError('清除失敗，請稍後再試');
+      setWorking(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (working) return;
+    setWorking(true); setError(null);
+    try {
+      await wipeData();
+      await window.auth.currentUser.delete();
+      onClose();
+    } catch (e) {
+      if (e.code === 'auth/requires-recent-login') {
+        setError('需要重新登入後才能刪除帳號，請先登出再重新登入');
+      } else {
+        setError('刪除失敗，請稍後再試');
+      }
+      setWorking(false);
+    }
+  };
+
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.18)' }} onClick={onClose}>
       <div style={{
@@ -251,6 +302,7 @@ function SettingsSheet({ user, onLogout, onClose }) {
         <div style={{ width: 36, height: 4, background: 'var(--ink-faint)', borderRadius: 2, margin: '0 auto 20px' }} />
         <div className="hand" style={{ fontSize: 24, color: 'var(--ink)', marginBottom: 20 }}>設定 ✿</div>
 
+        {/* account row */}
         <div style={{ background: 'var(--bg-paper)', borderRadius: 18, overflow: 'hidden', marginBottom: 12 }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px dashed var(--accent-faint)' }}>
             <div style={{ fontSize: 11, color: 'var(--ink-faint)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 3 }}>登入帳號</div>
@@ -266,6 +318,81 @@ function SettingsSheet({ user, onLogout, onClose }) {
               <polyline points="16 17 21 12 16 7"/>
               <line x1="21" y1="12" x2="9" y2="12"/>
             </svg>
+          </div>
+        </div>
+
+        {/* danger zone */}
+        <div style={{ background: 'var(--bg-paper)', borderRadius: 18, overflow: 'hidden', marginBottom: 12 }}>
+          <div style={{ padding: '10px 16px 6px', borderBottom: '1px dashed #F5E5DC' }}>
+            <div style={{ fontSize: 10, color: '#C9A0A0', fontWeight: 700, letterSpacing: '0.08em' }}>危險操作</div>
+          </div>
+
+          {/* clear data */}
+          <div style={{ borderBottom: '1px dashed #F5E5DC' }}>
+            <div className="tap" onClick={() => { setPhase(phase === 'clearData' ? null : 'clearData'); setError(null); }} style={{
+              padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div>
+                <div style={{ fontSize: 14, color: '#C5751F', fontWeight: 600 }}>清除所有數據</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 2 }}>刪除記帳紀錄、預算、金庫（帳號保留）</div>
+              </div>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="#C9A0A0" strokeWidth="2" style={{ transition: 'transform 0.15s', transform: phase === 'clearData' ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>
+                <path d="M1 1l4 4 4-4"/>
+              </svg>
+            </div>
+            {phase === 'clearData' && (
+              <div style={{ padding: '0 16px 14px', animation: 'pop-in 0.2s ease-out' }}>
+                <div style={{ background: '#FFF4E0', borderRadius: 12, padding: '10px 12px', marginBottom: 10, fontSize: 12, color: '#A0652A', lineHeight: 1.5 }}>
+                  ⚠️ 所有交易紀錄、金庫存款、預算設定都會被清除，這個動作無法復原。
+                </div>
+                {error && <div style={{ fontSize: 12, color: '#E05A5A', marginBottom: 8 }}>{error}</div>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="tap" onClick={() => { setPhase(null); setError(null); }} style={{
+                    flex: 1, padding: '10px', borderRadius: 12, background: 'var(--bg)',
+                    textAlign: 'center', fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600,
+                  }}>取消</div>
+                  <div className="tap" onClick={handleClearData} style={{
+                    flex: 2, padding: '10px', borderRadius: 12,
+                    background: working ? '#D5CCC4' : 'linear-gradient(135deg, #FFB366 0%, #E07030 100%)',
+                    textAlign: 'center', fontSize: 13, color: '#fff', fontWeight: 700,
+                  }}>{working ? '清除中…' : '確認清除'}</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* delete account */}
+          <div>
+            <div className="tap" onClick={() => { setPhase(phase === 'deleteAccount' ? null : 'deleteAccount'); setError(null); }} style={{
+              padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div>
+                <div style={{ fontSize: 14, color: '#E05A5A', fontWeight: 600 }}>刪除帳號</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 2 }}>永久刪除帳號與所有數據</div>
+              </div>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="#C9A0A0" strokeWidth="2" style={{ transition: 'transform 0.15s', transform: phase === 'deleteAccount' ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>
+                <path d="M1 1l4 4 4-4"/>
+              </svg>
+            </div>
+            {phase === 'deleteAccount' && (
+              <div style={{ padding: '0 16px 14px', animation: 'pop-in 0.2s ease-out' }}>
+                <div style={{ background: '#FFE9E9', borderRadius: 12, padding: '10px 12px', marginBottom: 10, fontSize: 12, color: '#A03030', lineHeight: 1.5 }}>
+                  ⚠️ 帳號刪除後無法復原，所有數據（包含帳號本身）都會消失。
+                </div>
+                {error && <div style={{ fontSize: 12, color: '#E05A5A', marginBottom: 8 }}>{error}</div>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="tap" onClick={() => { setPhase(null); setError(null); }} style={{
+                    flex: 1, padding: '10px', borderRadius: 12, background: 'var(--bg)',
+                    textAlign: 'center', fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600,
+                  }}>取消</div>
+                  <div className="tap" onClick={handleDeleteAccount} style={{
+                    flex: 2, padding: '10px', borderRadius: 12,
+                    background: working ? '#D5CCC4' : 'linear-gradient(135deg, #E05A5A 0%, #B03030 100%)',
+                    textAlign: 'center', fontSize: 13, color: '#fff', fontWeight: 700,
+                  }}>{working ? '刪除中…' : '確認刪除帳號'}</div>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
