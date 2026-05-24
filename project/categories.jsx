@@ -143,8 +143,8 @@ function CatBubble({ id, size = 44 }) {
       flexShrink: 0,
       boxShadow: `inset 0 -2px 0 ${cat.color}22`,
     }}>
-      {isBuiltin
-        ? <CatIcon id={id} size={size * 0.55} color={cat.color}/>
+      {(isBuiltin || cat.icon)
+        ? <CatIcon id={cat.icon || id} size={size * 0.55} color={cat.color}/>
         : <span style={{ fontSize: size * 0.42, fontWeight: 700, color: cat.color, lineHeight: 1 }}>{(cat.label || '?')[0]}</span>
       }
     </div>
