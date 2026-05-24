@@ -11,7 +11,7 @@ const DEFAULT_ENVELOPES = [
 ];
 window.DEFAULT_ENVELOPES = DEFAULT_ENVELOPES;
 
-function BudgetScreen({ onClose, transactions = [] }) {
+function BudgetScreen({ onClose, onAdvisor, transactions = [] }) {
   const [total, setTotal] = useStateBudget(20000);
   const [totalRaw, setTotalRaw] = useStateBudget('');
   const [totalEditing, setTotalEditing] = useStateBudget(false);
@@ -115,10 +115,19 @@ function BudgetScreen({ onClose, transactions = [] }) {
           </svg>
         </div>
         <div className="hand" style={{ fontSize: 24, color: 'var(--ink)' }}>預算管理</div>
-        <div className="tap" style={{
-          padding: '6px 14px', borderRadius: 999, background: 'var(--accent)',
-          color: '#fff', fontSize: 13, fontWeight: 600,
-        }} onClick={handleSave}>{saving ? '儲存中…' : '儲存'}</div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          {onAdvisor && (
+            <div className="tap" onClick={onAdvisor} style={{
+              padding: '6px 12px', borderRadius: 999,
+              background: 'var(--accent-faint)', color: 'var(--accent)',
+              fontSize: 12, fontWeight: 700,
+            }}>🦊 小桃規劃</div>
+          )}
+          <div className="tap" style={{
+            padding: '6px 14px', borderRadius: 999, background: 'var(--accent)',
+            color: '#fff', fontSize: 13, fontWeight: 600,
+          }} onClick={handleSave}>{saving ? '儲存中…' : '儲存'}</div>
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 30 }}>

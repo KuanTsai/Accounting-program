@@ -185,7 +185,7 @@ function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   );
 }
 
-const APP_VERSION = 'v0.1.3';
+const APP_VERSION = 'v0.2.0';
 
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -473,6 +473,7 @@ function App() {
   const [editingGoal, setEditingGoal] = useStateApp(null);
   const [withdrawPot, setWithdrawPot] = useStateApp(null);
   const [depositPot, setDepositPot] = useStateApp(null);
+  const [advisorOpen, setAdvisorOpen] = useStateApp(false);
   const [categoriesOpen, setCategoriesOpen] = useStateApp(false);
   const [foxOpen, setFoxOpen] = useStateApp(false);
   const [paletteOpen, setPaletteOpen] = useStateApp(false);
@@ -699,6 +700,16 @@ function App() {
     setEditingGoal(null);
   };
 
+  const handleApplyAdvisor = async (envelopes) => {
+    if (!user) return;
+    const total = envelopes.reduce((s, e) => s + e.total, 0);
+    await window.db.collection('users').doc(user.uid).collection('settings').doc('budget').set({
+      total, warnAt: 80, remindOn: true, envelopes,
+    });
+    setAdvisorOpen(false);
+    setBudgetOpen(false);
+  };
+
   const handleDepositConfirm = async ({ pot, amount, source }) => {
     if (!user) return;
     const uid = user.uid;
@@ -781,7 +792,12 @@ function App() {
         <AddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={handleSaved} envelopes={envelopes} preset={addPreset}/>
         {budgetOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
-            <BudgetScreen onClose={() => setBudgetOpen(false)} transactions={transactions}/>
+            <BudgetScreen onClose={() => setBudgetOpen(false)} onAdvisor={() => setAdvisorOpen(true)} transactions={transactions}/>
+          </div>
+        )}
+        {advisorOpen && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 80, animation: 'slide-up 0.3s ease-out' }}>
+            <FinancialAdvisorScreen onClose={() => setAdvisorOpen(false)} onApply={handleApplyAdvisor}/>
           </div>
         )}
         {vaultOpen && (
