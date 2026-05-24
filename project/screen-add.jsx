@@ -10,7 +10,7 @@ function AddScreen({ onClose, onSave, envelopes = [], preset = {} }) {
   const [type, setType] = useStateAdd(() => preset.type || 'expense'); // expense | income
   const [note, setNote] = useStateAdd('');
   const [mood, setMood] = useStateAdd(null);
-  const [diaryOpen, setDiaryOpen] = useStateAdd(false);
+  const [diaryOpen, setDiaryOpen] = useStateAdd(() => preset.diaryOpen || false);
   const [diaryText, setDiaryText] = useStateAdd('');
   const [envelopeId, setEnvelopeId] = useStateAdd(null);
 

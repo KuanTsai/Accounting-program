@@ -743,7 +743,7 @@ function App() {
     switch (tab) {
       case 'home': return <HomeScreen data={liveData} envelopes={envelopes} catUsed={catUsed} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions} envelopes={envelopes}/>;
-      case 'diary': return <DiaryScreen transactions={transactions}/>;
+      case 'diary': return <DiaryScreen transactions={transactions} onAdd={handleAdd}/>;
       case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} palette={tweaks.palette} foxState={foxState} transactions={transactions} envelopes={envelopes} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
       default: return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd}/>;
     }
