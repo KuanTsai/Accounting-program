@@ -1,5 +1,5 @@
 // Cache version — bump this with every release to purge stale caches
-const CACHE = 'kotomo-v0.2.9';
+const CACHE = 'kotomo-v0.3.0';
 
 // Pre-cache only truly static assets (icons never change)
 const PRECACHE = [
