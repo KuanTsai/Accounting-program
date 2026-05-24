@@ -41,6 +41,18 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
   const monthLabel = `${_now.getMonth() + 1}月`;
   const todayLabel = `${_now.getMonth() + 1}/${_now.getDate()}`;
 
+  // envelope budget stats
+  const budgetTotal = envelopes.reduce((s, e) => s + (e.total || 0), 0);
+  const budgetRemaining = Math.max(0, budgetTotal - expense);
+  const budgetPct = budgetTotal > 0 ? Math.min((expense / budgetTotal) * 100, 100) : 0;
+  const budgetOver = budgetTotal > 0 && expense > budgetTotal;
+  const daysLeft = (() => {
+    const last = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate();
+    return Math.max(1, last - _now.getDate());
+  })();
+  const dailyLeft = budgetRemaining > 0 ? Math.round(budgetRemaining / daysLeft) : 0;
+  const useEnvelopeMode = budgetTotal > 0;
+
   return (
     <div style={{ paddingBottom: 100 }}>
       <ScreenHeader
@@ -131,34 +143,69 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 500 }}>
-              {monthLabel}結餘
+              {useEnvelopeMode ? `${monthLabel}預算剩餘` : `${monthLabel}結餘`}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--ink-faint)' }}>
-              <span className="hand-en">{todayLabel}</span>
-            </div>
+            <span className="hand-en" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{todayLabel}</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 4 }}>
             <span style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 500 }}>NT$</span>
-            <span style={{ fontSize: 38, color: 'var(--ink)', fontWeight: 700, letterSpacing: -0.5 }}>
-              {balance.toLocaleString()}
+            <span style={{ fontSize: 38, fontWeight: 700, letterSpacing: -0.5, color: budgetOver ? '#D86A8A' : 'var(--ink)' }}>
+              {useEnvelopeMode ? budgetRemaining.toLocaleString() : balance.toLocaleString()}
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-            <div style={{ flex: 1, background: '#E2F4E8', borderRadius: 18, padding: '10px 14px' }}>
-              <div style={{ fontSize: 10, color: '#5BA37D', fontWeight: 600, letterSpacing: '0.05em' }}>＋ 收入</div>
-              <div style={{ fontSize: 18, color: '#3B8A5C', fontWeight: 700, marginTop: 2 }}>
-                ${income.toLocaleString()}
+          {useEnvelopeMode ? (
+            <>
+              {/* progress bar */}
+              <div style={{ marginTop: 14, background: '#F5EBE4', borderRadius: 999, height: 10, padding: 2 }}>
+                <div style={{
+                  height: '100%', borderRadius: 999,
+                  width: `${budgetPct}%`,
+                  background: budgetOver
+                    ? 'linear-gradient(90deg, #FFB97A 0%, #F08A8A 100%)'
+                    : 'linear-gradient(90deg, var(--accent) 0%, var(--secondary) 100%)',
+                  transition: 'width 0.4s',
+                }} />
+              </div>
+              <div style={{ fontSize: 10, color: budgetOver ? '#D86A8A' : 'var(--ink-soft)', marginTop: 6, textAlign: 'right', fontWeight: 500 }}>
+                {budgetOver
+                  ? `超支 $${(expense - budgetTotal).toLocaleString()} ！`
+                  : `已花 $${expense.toLocaleString()} ／ $${budgetTotal.toLocaleString()}`
+                }
+              </div>
+              {/* daily budget */}
+              <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+                <div style={{ flex: 1, background: budgetOver ? '#FFE0E0' : '#E2F4E8', borderRadius: 18, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 10, color: budgetOver ? '#D86A8A' : '#5BA37D', fontWeight: 600, letterSpacing: '0.05em' }}>每天可花</div>
+                  <div style={{ fontSize: 18, color: budgetOver ? '#D86A8A' : '#3B8A5C', fontWeight: 700, marginTop: 2 }}>
+                    ${budgetOver ? 0 : dailyLeft.toLocaleString()}
+                  </div>
+                </div>
+                <div style={{ flex: 1, background: 'var(--accent-faint)', borderRadius: 18, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, letterSpacing: '0.05em' }}>剩 {daysLeft} 天</div>
+                  <div style={{ fontSize: 18, color: '#D86A8A', fontWeight: 700, marginTop: 2 }}>
+                    ${expense.toLocaleString()}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+              <div style={{ flex: 1, background: '#E2F4E8', borderRadius: 18, padding: '10px 14px' }}>
+                <div style={{ fontSize: 10, color: '#5BA37D', fontWeight: 600, letterSpacing: '0.05em' }}>＋ 收入</div>
+                <div style={{ fontSize: 18, color: '#3B8A5C', fontWeight: 700, marginTop: 2 }}>
+                  ${income.toLocaleString()}
+                </div>
+              </div>
+              <div style={{ flex: 1, background: 'var(--accent-faint)', borderRadius: 18, padding: '10px 14px' }}>
+                <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, letterSpacing: '0.05em' }}>− 支出</div>
+                <div style={{ fontSize: 18, color: '#D86A8A', fontWeight: 700, marginTop: 2 }}>
+                  ${expense.toLocaleString()}
+                </div>
               </div>
             </div>
-            <div style={{ flex: 1, background: 'var(--accent-faint)', borderRadius: 18, padding: '10px 14px' }}>
-              <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, letterSpacing: '0.05em' }}>− 支出</div>
-              <div style={{ fontSize: 18, color: '#D86A8A', fontWeight: 700, marginTop: 2 }}>
-                ${expense.toLocaleString()}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
