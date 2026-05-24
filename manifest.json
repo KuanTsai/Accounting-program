@@ -1,14 +1,16 @@
 {
   "name": "小桃の信封日記",
   "short_name": "小桃信封",
-  "description": "可愛的信封理財日記 APP",
+  "description": "用信封預算法分配每月花費，搭配可愛的狐狸日記，讓記帳變成一件快樂的事 🦊",
   "start_url": "/Accounting-program/",
   "scope": "/Accounting-program/",
+  "id": "/Accounting-program/",
   "display": "standalone",
   "orientation": "portrait",
   "background_color": "#FFF6F0",
   "theme_color": "#FF8FAB",
   "lang": "zh-TW",
+  "categories": ["finance", "lifestyle", "productivity"],
   "icons": [
     {
       "src": "icons/icon-192.png",
