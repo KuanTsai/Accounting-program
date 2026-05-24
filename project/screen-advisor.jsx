@@ -2,10 +2,10 @@
 
 const { useState: useStateAdv } = React;
 
-function FoxBubble({ children }) {
+function FoxBubble({ children, fur, accessory }) {
   return (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-      <div style={{ flexShrink: 0 }}><Fox mood="happy" size={48}/></div>
+      <div style={{ flexShrink: 0 }}><Fox mood="happy" size={48} fur={fur} accessory={accessory}/></div>
       <div style={{
         background: 'var(--card)', borderRadius: 18, borderBottomLeftRadius: 4,
         padding: '13px 16px', flex: 1,
@@ -16,12 +16,13 @@ function FoxBubble({ children }) {
   );
 }
 
-function FinancialAdvisorScreen({ onClose, onApply }) {
+function FinancialAdvisorScreen({ onClose, onApply, foxFur = 'orange', foxAccessory = 'none' }) {
   const [step, setStep] = useStateAdv(0);
   const [income, setIncome] = useStateAdv('');
   const [fixedList, setFixedList] = useStateAdv([
     { id: 'rent',      label: '房租／房貸',    val: '' },
     { id: 'transport', label: '交通（月票等）', val: '' },
+    { id: 'telecom',   label: '電信費',         val: '' },
     { id: 'insurance', label: '保險費',         val: '' },
     { id: 'loan',      label: '貸款',           val: '' },
     { id: 'sub',       label: '訂閱服務',       val: '' },
@@ -131,7 +132,7 @@ function FinancialAdvisorScreen({ onClose, onApply }) {
         return (
           <div style={{ textAlign: 'center', padding: '8px 28px 24px' }}>
             <div className="wiggle" style={{ display: 'inline-block', marginBottom: 14 }}>
-              <Fox mood="happy" size={110}/>
+              <Fox mood="happy" size={110} fur={foxFur} accessory={foxAccessory}/>
             </div>
             <div className="hand" style={{ fontSize: 26, color: 'var(--ink)', marginBottom: 10 }}>
               讓小桃幫你規劃！
@@ -151,7 +152,7 @@ function FinancialAdvisorScreen({ onClose, onApply }) {
       case 1:
         return (
           <div style={{ padding: '8px 24px' }}>
-            <FoxBubble>
+            <FoxBubble fur={foxFur} accessory={foxAccessory}>
               每個月的<b>稅後總收入</b>大概多少？<br/>
               <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>本薪＋兼職＋獎金平均都算進去</span>
             </FoxBubble>
@@ -177,7 +178,7 @@ function FinancialAdvisorScreen({ onClose, onApply }) {
       case 2:
         return (
           <div style={{ padding: '8px 24px' }}>
-            <FoxBubble>
+            <FoxBubble fur={foxFur} accessory={foxAccessory}>
               每個月有哪些<b>固定支出</b>？<br/>
               <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>不確定的可以留空，0 也沒關係</span>
             </FoxBubble>
@@ -213,7 +214,7 @@ function FinancialAdvisorScreen({ onClose, onApply }) {
       case 3:
         return (
           <div style={{ padding: '8px 24px' }}>
-            <FoxBubble>目前的存款狀況大概是哪一種？</FoxBubble>
+            <FoxBubble fur={foxFur} accessory={foxAccessory}>目前的存款狀況大概是哪一種？</FoxBubble>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginTop: 18 }}>
               {SITUATIONS.map(s => (
                 <div key={s.id} className="tap" onClick={() => setSituation(s.id)} style={{
@@ -235,7 +236,7 @@ function FinancialAdvisorScreen({ onClose, onApply }) {
       case 4:
         return (
           <div style={{ padding: '8px 24px' }}>
-            <FoxBubble>
+            <FoxBubble fur={foxFur} accessory={foxAccessory}>
               最後！最想達成的理財目標是？<br/>
               <span style={{ fontSize: 12, color: 'var(--ink-soft)' }}>可以多選 ✿</span>
             </FoxBubble>
@@ -263,7 +264,7 @@ function FinancialAdvisorScreen({ onClose, onApply }) {
         return (
           <div style={{ padding: '8px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 18 }}>
-              <div className="wiggle" style={{ flexShrink: 0 }}><Fox mood="excited" size={52}/></div>
+              <div className="wiggle" style={{ flexShrink: 0 }}><Fox mood="excited" size={52} fur={foxFur} accessory={foxAccessory}/></div>
               <div style={{
                 background: 'var(--card)', borderRadius: 18, borderBottomLeftRadius: 4,
                 padding: '14px 16px', flex: 1, fontSize: 13, color: 'var(--ink)',

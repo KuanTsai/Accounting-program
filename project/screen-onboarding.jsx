@@ -116,6 +116,8 @@ function OnboardingScreen({ onFinish }) {
       {advisorOpen && (
         <FinancialAdvisorScreen
           onClose={() => setAdvisorOpen(false)}
+          foxFur={fur}
+          foxAccessory={accessory}
           onApply={(envs) => {
             setAdvisorEnvelopes(envs);
             setAdvisorOpen(false);
