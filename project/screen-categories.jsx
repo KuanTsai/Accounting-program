@@ -1,9 +1,14 @@
 // Category management — list + reorder + per-category edit sheet
 
-const { useState: useStateCat } = React;
+const { useState: useStateCat, useEffect: useEffectCat } = React;
+
+const DEFAULT_CATS = () => CATEGORIES.map(c => ({
+  ...c,
+  on: true,
+  type: c.id === 'salary' ? 'income' : 'expense',
+}));
 
 function CategoryScreen({ onClose, transactions = [] }) {
-  // Count this month's transactions per category
   const now = new Date();
   const catCount = {};
   transactions.forEach(tx => {
@@ -14,12 +19,50 @@ function CategoryScreen({ onClose, transactions = [] }) {
     }
   });
 
-  const [cats, setCats] = useStateCat(() => CATEGORIES.map(c => ({
-    ...c,
-    on: true,
-    type: c.id === 'salary' ? 'income' : 'expense',
-  })));
+  const [cats, setCats] = useStateCat(DEFAULT_CATS);
   const [editingIdx, setEditingIdx] = useStateCat(null);
+  const [saving, setSaving] = useStateCat(false);
+  const [sortMode, setSortMode] = useStateCat(false);
+
+  // Load from Firestore on mount
+  useEffectCat(() => {
+    const uid = window.auth.currentUser?.uid;
+    if (!uid) return;
+    window.db.collection('users').doc(uid).collection('settings').doc('categories').get()
+      .then(doc => {
+        if (doc.exists && doc.data().cats && doc.data().cats.length > 0) {
+          setCats(doc.data().cats);
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSave = async () => {
+    setSaving(true);
+    const uid = window.auth.currentUser?.uid;
+    if (uid) {
+      try {
+        await window.db.collection('users').doc(uid).collection('settings').doc('categories').set({ cats });
+      } catch(e) {}
+    }
+    // Sync global CATEGORIES in-place so every other screen sees the update
+    const updated = cats.filter(c => c.on !== false).map(({ id, label, color, bg, fav, icon }) => ({ id, label, color, bg, fav: !!fav, ...(icon ? { icon } : {}) }));
+    CATEGORIES.splice(0, CATEGORIES.length, ...updated);
+    setSaving(false);
+    onClose();
+  };
+
+  const moveInType = (type, id, dir) => {
+    const typeItems = cats.filter(c => c.type === type);
+    const srcI = typeItems.findIndex(c => c.id === id);
+    const tgtI = srcI + dir;
+    if (tgtI < 0 || tgtI >= typeItems.length) return;
+    const srcFullI = cats.findIndex(c => c.id === id);
+    const tgtFullI = cats.findIndex(c => c.id === typeItems[tgtI].id);
+    const next = [...cats];
+    [next[srcFullI], next[tgtFullI]] = [next[tgtFullI], next[srcFullI]];
+    setCats(next);
+  };
 
   const expense = cats.filter(c => c.type === 'expense');
   const income  = cats.filter(c => c.type === 'income');
@@ -50,7 +93,21 @@ function CategoryScreen({ onClose, transactions = [] }) {
           </svg>
         </div>
         <div className="hand" style={{ fontSize: 24, color: 'var(--ink)' }}>分類管理</div>
-        <div style={{ width: 36 }}/>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div className="tap" onClick={() => setSortMode(s => !s)} style={{
+            padding: '6px 14px', borderRadius: 999,
+            background: sortMode ? 'var(--secondary)' : '#fff',
+            color: sortMode ? '#fff' : 'var(--ink-soft)',
+            fontSize: 13, fontWeight: 600,
+            boxShadow: 'var(--shadow-sm)',
+          }}>{sortMode ? '完成排序' : '排序'}</div>
+          {!sortMode && (
+            <div className="tap" onClick={handleSave} style={{
+              padding: '6px 14px', borderRadius: 999, background: 'var(--accent)',
+              color: '#fff', fontSize: 13, fontWeight: 600,
+            }}>{saving ? '儲存中…' : '儲存'}</div>
+          )}
+        </div>
       </div>
 
       <div style={{ flex: 1, overflowY: 'auto', paddingBottom: 40 }}>
@@ -62,7 +119,7 @@ function CategoryScreen({ onClose, transactions = [] }) {
           }}>
             <FoxMini size={26}/>
             <span style={{ flex: 1, fontSize: 12, color: 'var(--ink)', lineHeight: 1.5 }}>
-              點分類可以改名字、圖示和顏色，或用右上 + 新增自己的分類。
+              點 ☆ 設為常用分類，會出現在首頁快速記帳；點分類名稱可編輯。
             </span>
           </div>
         </div>
@@ -74,15 +131,20 @@ function CategoryScreen({ onClose, transactions = [] }) {
             <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{expense.length} 個</span>
           </div>
           <div style={{ background: 'var(--card)', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-            {expense.map((c) => {
+            {expense.map((c, ti) => {
               const realIdx = cats.findIndex(x => x.id === c.id);
               return (
                 <CategoryRow key={c.id} cat={c} count={catCount[c.id] || 0}
-                  onTap={() => setEditingIdx(realIdx)}
-                  onToggle={() => updateCat(realIdx, { on: !c.on })}/>
+                  sortMode={sortMode}
+                  isFirst={ti === 0} isLast={ti === expense.length - 1}
+                  onTap={() => !sortMode && setEditingIdx(realIdx)}
+                  onToggle={() => updateCat(realIdx, { on: !c.on })}
+                  onFav={() => updateCat(realIdx, { fav: !c.fav })}
+                  onMoveUp={() => moveInType('expense', c.id, -1)}
+                  onMoveDown={() => moveInType('expense', c.id, 1)}/>
               );
             })}
-            <AddCatRow label="新增支出分類" onClick={() => setEditingIdx('new')}/>
+            {!sortMode && <AddCatRow label="新增支出分類" onClick={() => setEditingIdx('new')}/>}
           </div>
         </div>
 
@@ -93,15 +155,20 @@ function CategoryScreen({ onClose, transactions = [] }) {
             <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{income.length} 個</span>
           </div>
           <div style={{ background: 'var(--card)', borderRadius: 20, overflow: 'hidden', boxShadow: 'var(--shadow-sm)' }}>
-            {income.map((c) => {
+            {income.map((c, ti) => {
               const realIdx = cats.findIndex(x => x.id === c.id);
               return (
                 <CategoryRow key={c.id} cat={c} count={catCount[c.id] || 0}
-                  onTap={() => setEditingIdx(realIdx)}
-                  onToggle={() => updateCat(realIdx, { on: !c.on })}/>
+                  sortMode={sortMode}
+                  isFirst={ti === 0} isLast={ti === income.length - 1}
+                  onTap={() => !sortMode && setEditingIdx(realIdx)}
+                  onToggle={() => updateCat(realIdx, { on: !c.on })}
+                  onFav={() => updateCat(realIdx, { fav: !c.fav })}
+                  onMoveUp={() => moveInType('income', c.id, -1)}
+                  onMoveDown={() => moveInType('income', c.id, 1)}/>
               );
             })}
-            <AddCatRow label="新增收入分類" onClick={() => setEditingIdx('new-income')}/>
+            {!sortMode && <AddCatRow label="新增收入分類" onClick={() => setEditingIdx('new-income')}/>}
           </div>
         </div>
       </div>
@@ -128,7 +195,7 @@ function CategoryScreen({ onClose, transactions = [] }) {
   );
 }
 
-function CategoryRow({ cat, count = 0, onTap, onToggle }) {
+function CategoryRow({ cat, count = 0, onTap, onToggle, onFav, sortMode, onMoveUp, onMoveDown, isFirst, isLast }) {
   const iconId = cat.icon || cat.id;
   const bg = cat.bg || '#FFE5EC';
   const color = cat.color || '#FF8FAB';
@@ -138,6 +205,25 @@ function CategoryRow({ cat, count = 0, onTap, onToggle }) {
       borderBottom: '1px dashed #F5E5DC',
       opacity: cat.on ? 1 : 0.5,
     }}>
+      {sortMode && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2, marginRight: 8 }}>
+          <div className="tap" onClick={onMoveUp} style={{
+            width: 26, height: 26, borderRadius: 8,
+            background: isFirst ? '#f0f0f0' : 'var(--accent-faint)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 13, color: isFirst ? 'var(--ink-faint)' : 'var(--accent)',
+            pointerEvents: isFirst ? 'none' : 'auto',
+          }}>↑</div>
+          <div className="tap" onClick={onMoveDown} style={{
+            width: 26, height: 26, borderRadius: 8,
+            background: isLast ? '#f0f0f0' : 'var(--accent-faint)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 13, color: isLast ? 'var(--ink-faint)' : 'var(--accent)',
+            pointerEvents: isLast ? 'none' : 'auto',
+          }}>↓</div>
+        </div>
+      )}
+
       <div className="tap" onClick={onTap} style={{
         flex: 1, display: 'flex', alignItems: 'center', gap: 12, minWidth: 0,
       }}>
@@ -149,21 +235,32 @@ function CategoryRow({ cat, count = 0, onTap, onToggle }) {
         </div>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 15, color: 'var(--ink)', fontWeight: 600 }}>{cat.label}</div>
-          <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 2 }}>本月 {count} 筆</div>
+          <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 2 }}>
+            {sortMode ? '長按拖曳或點 ↑↓ 調整順序' : `本月 ${count} 筆`}
+          </div>
         </div>
       </div>
 
-      <div onClick={onToggle} className="tap" style={{
-        width: 38, height: 22, borderRadius: 11,
-        background: cat.on ? '#7DCBA8' : '#D5CCC4',
-        position: 'relative', transition: 'background 0.15s', flexShrink: 0,
-      }}>
-        <div style={{
-          position: 'absolute', top: 2, left: cat.on ? 18 : 2,
-          width: 18, height: 18, borderRadius: 9, background: '#fff',
-          boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 0.15s',
-        }}/>
-      </div>
+      <div className="tap" onClick={onFav} style={{
+        width: 32, height: 32, borderRadius: 10, flexShrink: 0,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontSize: 18, marginRight: 8,
+        background: cat.fav ? '#FFF4D1' : 'transparent',
+      }}>{cat.fav ? '★' : '☆'}</div>
+
+      {!sortMode && (
+        <div onClick={onToggle} className="tap" style={{
+          width: 38, height: 22, borderRadius: 11,
+          background: cat.on ? '#7DCBA8' : '#D5CCC4',
+          position: 'relative', transition: 'background 0.15s', flexShrink: 0,
+        }}>
+          <div style={{
+            position: 'absolute', top: 2, left: cat.on ? 18 : 2,
+            width: 18, height: 18, borderRadius: 9, background: '#fff',
+            boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left 0.15s',
+          }}/>
+        </div>
+      )}
     </div>
   );
 }

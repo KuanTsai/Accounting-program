@@ -26,29 +26,45 @@ function OnboardingScreen({ onFinish }) {
   const [fur, setFur] = useStateOnb('orange');
   const [accessory, setAccessory] = useStateOnb('bow');
   const [budget, setBudget] = useStateOnb(20000);
-  const [pickedCats, setPickedCats] = useStateOnb(['food', 'shop', 'fun', 'drink', 'transport']);
+  const defaultEnvIds = (window.DEFAULT_ENVELOPES || []).map(e => e.id);
+  const [pickedEnvs, setPickedEnvs] = useStateOnb(defaultEnvIds);
+  const [advisorOpen, setAdvisorOpen] = useStateOnb(false);
+  const [advisorEnvelopes, setAdvisorEnvelopes] = useStateOnb(null);
 
   const finalName = name.trim() || '小桃';
+  const LAST = 7;
 
   const finish = () => {
     onFinish({
       name: finalName, fur, accessory, level: 1, exp: 0, days: 1,
       satiety: 80, energy: 80, moodScore: 90, mood: 'happy',
-      budget, pickedCats,
+      budget, pickedEnvs, advisorEnvelopes,
     });
   };
 
   const steps = [
-    { title: '歡迎', component: WelcomeStep },
-    { title: '取名字', component: NameStep },
-    { title: '選毛色', component: FurStep },
-    { title: '挑配件', component: AccessoryStep },
-    { title: '設預算', component: BudgetStep },
-    { title: '選分類', component: CategoryStep },
-    { title: '完成', component: DoneStep },
+    '歡迎', '取名字', '選毛色', '挑配件', '預算規劃', '設預算', '選信封', '完成',
   ];
-  const Step = steps[step].component;
-  const isLast = step === steps.length - 1;
+  const isChoiceStep = step === 4;
+  const isLast = step === LAST;
+
+  const sharedProps = { name, setName, fur, setFur, accessory, setAccessory, budget, setBudget, pickedEnvs, setPickedEnvs, finalName, advisorEnvelopes };
+
+  const renderStep = () => {
+    switch (step) {
+      case 0: return <WelcomeStep/>;
+      case 1: return <NameStep {...sharedProps}/>;
+      case 2: return <FurStep {...sharedProps}/>;
+      case 3: return <AccessoryStep {...sharedProps}/>;
+      case 4: return <BudgetChoiceStep fur={fur} accessory={accessory} finalName={finalName}
+        onManual={() => setStep(5)}
+        onAdvisor={() => setAdvisorOpen(true)}/>;
+      case 5: return <BudgetStep {...sharedProps}/>;
+      case 6: return <EnvelopeStep {...sharedProps}/>;
+      case 7: return <DoneStep {...sharedProps}/>;
+      default: return null;
+    }
+  };
 
   return (
     <div style={{
@@ -58,10 +74,7 @@ function OnboardingScreen({ onFinish }) {
       animation: 'pop-in 0.3s ease-out',
     }}>
       {/* progress dots + skip */}
-      <div style={{
-        padding: '54px 24px 14px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+      <div style={{ padding: '54px 24px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', gap: 4 }}>
           {steps.map((_, i) => (
             <div key={i} style={{
@@ -71,39 +84,48 @@ function OnboardingScreen({ onFinish }) {
             }}/>
           ))}
         </div>
-        {!isLast && step > 0 && (
-          <span className="tap" onClick={finish} style={{
-            fontSize: 12, color: 'var(--ink-soft)', padding: '4px 8px',
-          }}>略過 →</span>
+        {!isLast && step > 0 && !isChoiceStep && (
+          <span className="tap" onClick={finish} style={{ fontSize: 12, color: 'var(--ink-soft)', padding: '4px 8px' }}>略過 →</span>
         )}
       </div>
 
       {/* step content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px' }}>
-        <Step {...{
-          name, setName, fur, setFur, accessory, setAccessory,
-          budget, setBudget, pickedCats, setPickedCats, finalName,
-        }}/>
+        {renderStep()}
       </div>
 
-      {/* footer button */}
-      <div style={{ padding: '14px 24px 30px' }}>
-        <div className="tap"
-          onClick={() => {
-            if (isLast) finish();
-            else setStep(step + 1);
-          }}
-          style={{
-            background: isLast
-              ? 'linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%)'
-              : 'var(--accent)',
-            borderRadius: 18, padding: '15px 0', textAlign: 'center',
-            color: '#fff', fontSize: 16, fontWeight: 700,
-            boxShadow: '0 8px 20px rgba(255,143,171,0.35)',
-          }}>
-          {isLast ? '開始記錄吧 ✨' : step === 0 ? '開始 →' : '下一步 →'}
+      {/* footer button — hidden for choice step */}
+      {!isChoiceStep && (
+        <div style={{ padding: '14px 24px 30px' }}>
+          <div className="tap"
+            onClick={() => { if (isLast) finish(); else setStep(step + 1); }}
+            style={{
+              background: isLast
+                ? 'linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%)'
+                : 'var(--accent)',
+              borderRadius: 18, padding: '15px 0', textAlign: 'center',
+              color: '#fff', fontSize: 16, fontWeight: 700,
+              boxShadow: '0 8px 20px rgba(255,143,171,0.35)',
+            }}>
+            {isLast ? '開始記錄吧 ✨' : step === 0 ? '開始 →' : '下一步 →'}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Advisor overlay inside onboarding */}
+      {advisorOpen && (
+        <FinancialAdvisorScreen
+          onClose={() => setAdvisorOpen(false)}
+          foxFur={fur}
+          foxAccessory={accessory}
+          foxName={finalName}
+          onApply={(envs) => {
+            setAdvisorEnvelopes(envs);
+            setAdvisorOpen(false);
+            setStep(LAST);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -131,13 +153,14 @@ function WelcomeStep() {
       }}>
         {[
           { icon: '🦊', t: '一隻屬於你的狐狸', s: '陪你度過每個記帳的日子' },
-          { icon: '🪙', t: '可愛的小金庫', s: '把省下的錢分類存起來' },
+          { icon: '✉️', t: '信封預算管理', s: '把錢分配到不同信封，花到哪看到哪' },
+          { icon: '🪙', t: '可愛的小金庫', s: '每月省下的錢自動存進來' },
           { icon: '✍️', t: '記帳順便寫日記', s: '心情和支出一起記錄' },
         ].map((f, i) => (
           <div key={i} style={{
             display: 'flex', alignItems: 'center', gap: 12,
             padding: '8px 0',
-            borderBottom: i < 2 ? '1px dashed #F5E5DC' : 'none',
+            borderBottom: i < 3 ? '1px dashed #F5E5DC' : 'none',
           }}>
             <div style={{ fontSize: 22, width: 30, textAlign: 'center' }}>{f.icon}</div>
             <div style={{ flex: 1 }}>
@@ -274,8 +297,70 @@ function AccessoryStep({ fur, accessory, setAccessory, finalName }) {
   );
 }
 
+function BudgetChoiceStep({ fur, accessory, finalName, onManual, onAdvisor }) {
+  return (
+    <div style={{ textAlign: 'center', paddingTop: 16 }}>
+      <Fox mood="happy" size={100} fur={fur} accessory={accessory}/>
+      <div className="hand" style={{ fontSize: 26, color: 'var(--ink)', marginTop: 14 }}>
+        怎麼設定預算？
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 6, marginBottom: 28 }}>
+        選一個你喜歡的方式 ✿
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="tap" onClick={onAdvisor} style={{
+          background: 'linear-gradient(135deg, var(--accent-faint) 0%, #FFF1E8 100%)',
+          border: '2px solid var(--accent-soft)',
+          borderRadius: 22, padding: '20px 18px',
+          display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+        }}>
+          <div style={{
+            width: 54, height: 54, borderRadius: 16, background: 'var(--accent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <Fox mood="excited" size={44} fur={fur}/>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>讓{finalName}幫我規劃 🦊</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4, lineHeight: 1.55 }}>
+              回答幾個問題，小桃幫你算出<br/>最適合的預算分配方式
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+
+        <div className="tap" onClick={onManual} style={{
+          background: 'rgba(255,255,255,0.75)',
+          border: '2px solid rgba(74,58,53,0.08)',
+          borderRadius: 22, padding: '18px 18px',
+          display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+          boxShadow: 'var(--shadow-sm)',
+        }}>
+          <div style={{
+            width: 54, height: 54, borderRadius: 16, background: 'var(--bg)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 26, flexShrink: 0,
+          }}>✏️</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>自己設定</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4 }}>
+              直接輸入月預算金額和信封分配
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BudgetStep({ budget, setBudget, fur, accessory }) {
+  const { useState: useStateBS } = React;
   const presets = [10000, 20000, 30000, 50000];
+  const [raw, setRaw] = useStateBS('');
+  const [editing, setEditing] = useStateBS(false);
+
   return (
     <div style={{ textAlign: 'center', paddingTop: 10 }}>
       <Fox mood="happy" size={110} fur={fur} accessory={accessory}/>
@@ -288,28 +373,56 @@ function BudgetStep({ budget, setBudget, fur, accessory }) {
 
       <div style={{
         marginTop: 22, background: '#fff', borderRadius: 22,
-        padding: '20px 18px',
+        padding: '24px 18px',
         boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
       }}>
+        <div style={{ fontSize: 11, color: 'var(--ink-faint)', marginBottom: 8 }}>點數字直接輸入</div>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6 }}>
-          <span style={{ fontSize: 14, color: 'var(--ink-soft)' }}>NT$</span>
-          <span style={{
-            fontSize: 38, color: 'var(--ink)', fontWeight: 700,
-            fontVariantNumeric: 'tabular-nums', letterSpacing: -0.5,
-          }}>{budget.toLocaleString()}</span>
-          <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>/ 月</span>
+          <span style={{ fontSize: 16, color: 'var(--ink-soft)', fontWeight: 600 }}>NT$</span>
+          {editing ? (
+            <input
+              autoFocus
+              type="number"
+              value={raw}
+              onChange={e => setRaw(e.target.value)}
+              onBlur={() => {
+                const n = parseInt(raw, 10);
+                if (!isNaN(n) && n > 0) setBudget(n);
+                setEditing(false);
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') e.target.blur();
+                if (e.key === 'Escape') setEditing(false);
+              }}
+              style={{
+                fontSize: 48, fontWeight: 700, letterSpacing: -0.5,
+                border: 'none', outline: 'none', background: 'transparent',
+                color: 'var(--accent)', width: 200, textAlign: 'center',
+                borderBottom: '2.5px dashed var(--accent)',
+              }}
+            />
+          ) : (
+            <span
+              className="tap"
+              onClick={() => { setRaw(String(budget)); setEditing(true); }}
+              style={{
+                fontSize: 48, color: 'var(--ink)', fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums', letterSpacing: -0.5,
+                borderBottom: '2.5px dashed var(--accent-soft)',
+              }}
+            >
+              {budget.toLocaleString()}
+            </span>
+          )}
+          <span style={{ fontSize: 15, color: 'var(--ink-soft)' }}>/ 月</span>
         </div>
-        <input
-          type="range" min={5000} max={80000} step={1000}
-          value={budget} onChange={e => setBudget(Number(e.target.value))}
-          style={{ width: '100%', marginTop: 14, accentColor: 'var(--accent)' }}
-        />
-        <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+
+        <div style={{ display: 'flex', gap: 6, marginTop: 18 }}>
           {presets.map(p => (
             <span key={p} className="tap" onClick={() => setBudget(p)} style={{
               flex: 1, textAlign: 'center',
-              fontSize: 12, fontWeight: 600,
-              padding: '8px 0', borderRadius: 999,
+              fontSize: 13, fontWeight: 600,
+              padding: '9px 0', borderRadius: 999,
               background: budget === p ? 'var(--accent)' : 'var(--bg)',
               color: budget === p ? '#fff' : 'var(--ink-soft)',
               transition: 'all 0.15s',
@@ -325,69 +438,89 @@ function BudgetStep({ budget, setBudget, fur, accessory }) {
   );
 }
 
-function CategoryStep({ pickedCats, setPickedCats }) {
-  const toggle = (id) => {
-    setPickedCats(pickedCats.includes(id)
-      ? pickedCats.filter(c => c !== id)
-      : [...pickedCats, id]);
-  };
+function EnvelopeStep({ budget, pickedEnvs, setPickedEnvs }) {
+  const allEnvs = window.DEFAULT_ENVELOPES || [];
+  const defaultTotal = allEnvs.reduce((s, e) => s + e.total, 0);
+
+  const envAmt = (env) =>
+    defaultTotal > 0 ? Math.round(budget * (env.total / defaultTotal) / 500) * 500 : env.total;
+
+  const catLabel = (catId) => (CATEGORIES.find(c => c.id === catId) || {}).label || catId;
+
+  const toggle = (id) => setPickedEnvs(prev =>
+    prev.includes(id) ? prev.filter(e => e !== id) : [...prev, id]
+  );
+
+  const pickedTotal = allEnvs
+    .filter(e => pickedEnvs.includes(e.id))
+    .reduce((s, e) => s + envAmt(e), 0);
+
   return (
-    <div style={{ textAlign: 'center', paddingTop: 10 }}>
-      <div className="hand" style={{ fontSize: 26, color: 'var(--ink)', marginTop: 10 }}>
-        你常花在哪些地方？
+    <div style={{ paddingTop: 10 }}>
+      <div className="hand" style={{ fontSize: 26, color: 'var(--ink)', textAlign: 'center' }}>
+        選擇你的信封 ✉️
       </div>
-      <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4 }}>
-        選 3-6 個常用分類，之後還能改
+      <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4, textAlign: 'center', lineHeight: 1.6 }}>
+        把每月預算分配到不同信封，<br/>記帳時選信封就能看到花了多少
       </div>
 
-      <div style={{
-        marginTop: 20,
-        display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10,
-      }}>
-        {CATEGORIES.filter(c => c.id !== 'salary').map(c => {
-          const sel = pickedCats.includes(c.id);
+      <div style={{ marginTop: 16, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {allEnvs.map(env => {
+          const sel = pickedEnvs.includes(env.id);
+          const amt = envAmt(env);
           return (
-            <div key={c.id} className="tap" onClick={() => toggle(c.id)} style={{
-              cursor: 'pointer',
-              background: sel ? c.bg : 'rgba(255,255,255,0.7)',
-              border: sel ? `2px solid ${c.color}` : '2px solid transparent',
-              borderRadius: 16, padding: '12px 0 8px',
-              textAlign: 'center', transition: 'all 0.15s',
-              position: 'relative',
+            <div key={env.id} className="tap" onClick={() => toggle(env.id)} style={{
+              background: sel ? env.bg : 'rgba(255,255,255,0.6)',
+              borderRadius: 16, padding: '12px 14px',
+              border: `2px solid ${sel ? env.color : 'transparent'}`,
+              display: 'flex', alignItems: 'center', gap: 12,
+              transition: 'all 0.15s',
             }}>
-              <CatBubble id={c.id} size={36}/>
-              <div style={{ fontSize: 12, color: 'var(--ink)', marginTop: 4, fontWeight: sel ? 700 : 500 }}>
-                {c.label}
+              <div style={{ fontSize: 24, width: 34, textAlign: 'center', flexShrink: 0 }}>{env.emoji}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--ink)' }}>{env.label}</span>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: sel ? env.color : 'var(--ink-faint)', fontVariantNumeric: 'tabular-nums' }}>
+                    ${amt.toLocaleString()}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 3 }}>
+                  {(env.cats || []).map(c => catLabel(c)).join('・')}
+                </div>
               </div>
-              {sel && (
-                <div style={{
-                  position: 'absolute', top: 4, right: 4,
-                  width: 16, height: 16, borderRadius: 8,
-                  background: c.color, color: '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 10, fontWeight: 700,
-                }}>✓</div>
-              )}
+              <div style={{
+                width: 22, height: 22, borderRadius: 11, flexShrink: 0,
+                background: sel ? env.color : 'rgba(0,0,0,0.08)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                color: '#fff', fontSize: 12, fontWeight: 700,
+                transition: 'all 0.15s',
+              }}>{sel ? '✓' : ''}</div>
             </div>
           );
         })}
       </div>
 
       <div style={{
-        marginTop: 16, padding: '10px 14px',
+        marginTop: 14, padding: '10px 14px',
         background: 'rgba(255,255,255,0.7)', borderRadius: 14,
-        fontSize: 12, color: 'var(--ink)',
+        fontSize: 12, color: 'var(--ink)', textAlign: 'center',
       }}>
-        已選 <b style={{ color: 'var(--accent)' }}>{pickedCats.length}</b> 個 ♥
+        已選 <b style={{ color: 'var(--accent)' }}>{pickedEnvs.length}</b> 個信封，
+        合計 <b style={{ color: 'var(--ink)' }}>${pickedTotal.toLocaleString()}</b> / 月
       </div>
     </div>
   );
 }
 
-function DoneStep({ fur, accessory, finalName, budget }) {
+function DoneStep({ fur, accessory, finalName, budget, pickedEnvs, advisorEnvelopes }) {
+  const allEnvs = window.DEFAULT_ENVELOPES || [];
+  const selected = advisorEnvelopes || allEnvs.filter(e => pickedEnvs.includes(e.id));
+  const displayBudget = advisorEnvelopes
+    ? advisorEnvelopes.reduce((s, e) => s + e.total, 0)
+    : budget;
+
   return (
     <div style={{ textAlign: 'center', paddingTop: 20, position: 'relative' }}>
-      {/* sparkles */}
       {[
         { l: '8%', t: '0%' }, { l: '88%', t: '8%' },
         { l: '16%', t: '24%' }, { l: '82%', t: '30%' },
@@ -400,7 +533,7 @@ function DoneStep({ fur, accessory, finalName, budget }) {
       ))}
 
       <div className="wiggle" style={{ display: 'inline-block' }}>
-        <Fox mood="celebrate" size={160} fur={fur} accessory={accessory}/>
+        <Fox mood="celebrate" size={150} fur={fur} accessory={accessory}/>
       </div>
       <div className="hand" style={{ fontSize: 30, color: 'var(--ink)', marginTop: 16 }}>
         我們都準備好了！
@@ -410,12 +543,26 @@ function DoneStep({ fur, accessory, finalName, budget }) {
       </div>
 
       <div style={{
-        marginTop: 24, padding: '14px 18px',
+        marginTop: 20, padding: '14px 18px',
         background: 'rgba(255,255,255,0.85)', borderRadius: 18,
         boxShadow: 'var(--shadow-sm)', textAlign: 'left',
       }}>
         <SummaryRow icon="🦊" label="狐狸" value={finalName}/>
-        <SummaryRow icon="💰" label="月預算" value={`NT$ ${budget.toLocaleString()}`}/>
+        <SummaryRow icon="💰" label="月預算" value={`NT$ ${displayBudget.toLocaleString()}`}/>
+        <div style={{ padding: '8px 0', borderTop: '1px dashed #F5E5DC' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
+            <div style={{ fontSize: 18, width: 28, textAlign: 'center' }}>✉️</div>
+            <div style={{ fontSize: 13, color: 'var(--ink-soft)' }}>信封預算</div>
+          </div>
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', paddingLeft: 38 }}>
+            {selected.map(env => (
+              <span key={env.id} style={{
+                fontSize: 12, padding: '3px 10px', borderRadius: 999,
+                background: env.bg, color: env.color, fontWeight: 700,
+              }}>{env.emoji} {env.label}</span>
+            ))}
+          </div>
+        </div>
         <SummaryRow icon="✨" label="等級" value="Lv. 1（剛起步！）" last/>
       </div>
     </div>

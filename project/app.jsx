@@ -141,7 +141,7 @@ function LevelUpOverlay({ info, foxState, onClose }) {
 }
 
 // ─── celebration toast (after add) ─────────────────────
-function Toast({ show, withDiary, streak = 0, expGain = 10, isFirstToday = false }) {
+function Toast({ show, withDiary, streak = 0, expGain = 10, isFirstToday = false, foxFur = 'orange', foxAccessory = 'none' }) {
   if (!show) return null;
   const bonusNote = isFirstToday ? '　首筆 +5 ✦' : streak >= 7 ? `　連續 ${streak} 天加成` : '';
   return (
@@ -159,7 +159,7 @@ function Toast({ show, withDiary, streak = 0, expGain = 10, isFirstToday = false
         minWidth: 220,
       }}>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <Fox mood="celebrate" size={80}/>
+          <Fox mood="celebrate" size={80} fur={foxFur} accessory={foxAccessory}/>
         </div>
         <div className="hand" style={{ fontSize: 22, color: 'var(--ink)', marginTop: 8 }}>
           {withDiary ? '記錄＋日記都完成！' : '你做得很棒！'}
@@ -173,17 +173,19 @@ function Toast({ show, withDiary, streak = 0, expGain = 10, isFirstToday = false
 }
 
 // ─── add modal wrapper ─────────────────────────────────
-function AddModal({ open, onClose, onDone }) {
+function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   if (!open) return null;
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 70,
       animation: 'slide-up 0.3s ease-out',
     }}>
-      <AddScreen onClose={onClose} onSave={(payload) => { onClose(); onDone(payload); }}/>
+      <AddScreen onClose={onClose} envelopes={envelopes} preset={preset} onSave={(payload) => { onClose(); onDone(payload); }}/>
     </div>
   );
 }
+
+const APP_VERSION = 'v0.2.7';
 
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -237,6 +239,57 @@ function PaletteRadio({ value, onChange }) {
 
 // ─── settings bottom sheet ─────────────────────────────
 function SettingsSheet({ user, onLogout, onClose }) {
+  const [phase, setPhase] = useStateApp(null); // null | 'clearData' | 'deleteAccount'
+  const [working, setWorking] = useStateApp(false);
+  const [error, setError] = useStateApp(null);
+
+  const deleteCol = async (uid, col) => {
+    const snap = await window.db.collection('users').doc(uid).collection(col).get();
+    if (snap.empty) return;
+    for (let i = 0; i < snap.docs.length; i += 400) {
+      const batch = window.db.batch();
+      snap.docs.slice(i, i + 400).forEach(d => batch.delete(d.ref));
+      await batch.commit();
+    }
+  };
+
+  const wipeData = async () => {
+    const uid = user.uid;
+    for (const col of ['transactions', 'goals', 'autopots', 'closes', 'settings']) {
+      await deleteCol(uid, col);
+    }
+    try { localStorage.removeItem('onboardingDone'); localStorage.removeItem('foxState'); } catch {}
+  };
+
+  const handleClearData = async () => {
+    if (working) return;
+    setWorking(true); setError(null);
+    try {
+      await wipeData();
+      onLogout();
+    } catch {
+      setError('清除失敗，請稍後再試');
+      setWorking(false);
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (working) return;
+    setWorking(true); setError(null);
+    try {
+      await wipeData();
+      await window.auth.currentUser.delete();
+      onClose();
+    } catch (e) {
+      if (e.code === 'auth/requires-recent-login') {
+        setError('需要重新登入後才能刪除帳號，請先登出再重新登入');
+      } else {
+        setError('刪除失敗，請稍後再試');
+      }
+      setWorking(false);
+    }
+  };
+
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 60, background: 'rgba(0,0,0,0.18)' }} onClick={onClose}>
       <div style={{
@@ -251,6 +304,7 @@ function SettingsSheet({ user, onLogout, onClose }) {
         <div style={{ width: 36, height: 4, background: 'var(--ink-faint)', borderRadius: 2, margin: '0 auto 20px' }} />
         <div className="hand" style={{ fontSize: 24, color: 'var(--ink)', marginBottom: 20 }}>設定 ✿</div>
 
+        {/* account row */}
         <div style={{ background: 'var(--bg-paper)', borderRadius: 18, overflow: 'hidden', marginBottom: 12 }}>
           <div style={{ padding: '14px 16px', borderBottom: '1px dashed var(--accent-faint)' }}>
             <div style={{ fontSize: 11, color: 'var(--ink-faint)', fontWeight: 600, letterSpacing: '0.06em', marginBottom: 3 }}>登入帳號</div>
@@ -269,11 +323,90 @@ function SettingsSheet({ user, onLogout, onClose }) {
           </div>
         </div>
 
+        {/* danger zone */}
+        <div style={{ background: 'var(--bg-paper)', borderRadius: 18, overflow: 'hidden', marginBottom: 12 }}>
+          <div style={{ padding: '10px 16px 6px', borderBottom: '1px dashed #F5E5DC' }}>
+            <div style={{ fontSize: 10, color: '#C9A0A0', fontWeight: 700, letterSpacing: '0.08em' }}>危險操作</div>
+          </div>
+
+          {/* clear data */}
+          <div style={{ borderBottom: '1px dashed #F5E5DC' }}>
+            <div className="tap" onClick={() => { setPhase(phase === 'clearData' ? null : 'clearData'); setError(null); }} style={{
+              padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div>
+                <div style={{ fontSize: 14, color: '#C5751F', fontWeight: 600 }}>清除所有數據</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 2 }}>刪除記帳紀錄、預算、金庫（帳號保留）</div>
+              </div>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="#C9A0A0" strokeWidth="2" style={{ transition: 'transform 0.15s', transform: phase === 'clearData' ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>
+                <path d="M1 1l4 4 4-4"/>
+              </svg>
+            </div>
+            {phase === 'clearData' && (
+              <div style={{ padding: '0 16px 14px', animation: 'pop-in 0.2s ease-out' }}>
+                <div style={{ background: '#FFF4E0', borderRadius: 12, padding: '10px 12px', marginBottom: 10, fontSize: 12, color: '#A0652A', lineHeight: 1.5 }}>
+                  ⚠️ 所有交易紀錄、金庫存款、預算設定都會被清除，這個動作無法復原。
+                </div>
+                {error && <div style={{ fontSize: 12, color: '#E05A5A', marginBottom: 8 }}>{error}</div>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="tap" onClick={() => { setPhase(null); setError(null); }} style={{
+                    flex: 1, padding: '10px', borderRadius: 12, background: 'var(--bg)',
+                    textAlign: 'center', fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600,
+                  }}>取消</div>
+                  <div className="tap" onClick={handleClearData} style={{
+                    flex: 2, padding: '10px', borderRadius: 12,
+                    background: working ? '#D5CCC4' : 'linear-gradient(135deg, #FFB366 0%, #E07030 100%)',
+                    textAlign: 'center', fontSize: 13, color: '#fff', fontWeight: 700,
+                  }}>{working ? '清除中…' : '確認清除'}</div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* delete account */}
+          <div>
+            <div className="tap" onClick={() => { setPhase(phase === 'deleteAccount' ? null : 'deleteAccount'); setError(null); }} style={{
+              padding: '14px 16px', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+            }}>
+              <div>
+                <div style={{ fontSize: 14, color: '#E05A5A', fontWeight: 600 }}>刪除帳號</div>
+                <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 2 }}>永久刪除帳號與所有數據</div>
+              </div>
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" stroke="#C9A0A0" strokeWidth="2" style={{ transition: 'transform 0.15s', transform: phase === 'deleteAccount' ? 'rotate(180deg)' : 'none', flexShrink: 0 }}>
+                <path d="M1 1l4 4 4-4"/>
+              </svg>
+            </div>
+            {phase === 'deleteAccount' && (
+              <div style={{ padding: '0 16px 14px', animation: 'pop-in 0.2s ease-out' }}>
+                <div style={{ background: '#FFE9E9', borderRadius: 12, padding: '10px 12px', marginBottom: 10, fontSize: 12, color: '#A03030', lineHeight: 1.5 }}>
+                  ⚠️ 帳號刪除後無法復原，所有數據（包含帳號本身）都會消失。
+                </div>
+                {error && <div style={{ fontSize: 12, color: '#E05A5A', marginBottom: 8 }}>{error}</div>}
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div className="tap" onClick={() => { setPhase(null); setError(null); }} style={{
+                    flex: 1, padding: '10px', borderRadius: 12, background: 'var(--bg)',
+                    textAlign: 'center', fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600,
+                  }}>取消</div>
+                  <div className="tap" onClick={handleDeleteAccount} style={{
+                    flex: 2, padding: '10px', borderRadius: 12,
+                    background: working ? '#D5CCC4' : 'linear-gradient(135deg, #E05A5A 0%, #B03030 100%)',
+                    textAlign: 'center', fontSize: 13, color: '#fff', fontWeight: 700,
+                  }}>{working ? '刪除中…' : '確認刪除帳號'}</div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
         <div className="tap" onClick={onClose} style={{
           marginTop: 8, padding: '13px', borderRadius: 16,
           background: 'var(--accent-faint)', textAlign: 'center',
           fontSize: 15, color: 'var(--accent)', fontWeight: 700,
         }}>關閉</div>
+
+        <div style={{ marginTop: 16, textAlign: 'center', fontSize: 11, color: 'var(--ink-faint)' }}>
+          小桃の信封日記 {APP_VERSION}
+        </div>
       </div>
     </div>
   );
@@ -332,12 +465,15 @@ function calculateStreak(transactions) {
 function App() {
   const [tab, setTab] = useStateApp('home');
   const [addOpen, setAddOpen] = useStateApp(false);
+  const [addPreset, setAddPreset] = useStateApp({});
   const [budgetOpen, setBudgetOpen] = useStateApp(false);
   const [vaultOpen, setVaultOpen] = useStateApp(false);
   const [closeOpen, setCloseOpen] = useStateApp(false);
   const [newGoalOpen, setNewGoalOpen] = useStateApp(false);
+  const [editingGoal, setEditingGoal] = useStateApp(null);
   const [withdrawPot, setWithdrawPot] = useStateApp(null);
   const [depositPot, setDepositPot] = useStateApp(null);
+  const [advisorOpen, setAdvisorOpen] = useStateApp(false);
   const [categoriesOpen, setCategoriesOpen] = useStateApp(false);
   const [foxOpen, setFoxOpen] = useStateApp(false);
   const [paletteOpen, setPaletteOpen] = useStateApp(false);
@@ -384,7 +520,7 @@ function App() {
   const [goalPots, setGoalPots] = useStateApp([]);
   const [autoPots, setAutoPots] = useStateApp([]);
   const [monthClosed, setMonthClosed] = useStateApp(false);
-  const [budgetItems, setBudgetItems] = useStateApp([]);
+  const [envelopes, setEnvelopes] = useStateApp([]);
 
   // apply palette
   useEffectApp(() => {
@@ -416,6 +552,19 @@ function App() {
     });
   }, []);
 
+  // categories subscription — keeps global CATEGORIES in sync
+  useEffectApp(() => {
+    if (!user) return;
+    window.db.collection('users').doc(user.uid).collection('settings').doc('categories').get()
+      .then(doc => {
+        if (doc.exists && doc.data().cats && doc.data().cats.length > 0) {
+          const updated = doc.data().cats.filter(c => c.on !== false).map(({ id, label, color, bg, fav, icon }) => ({ id, label, color, bg, fav: !!fav, ...(icon ? { icon } : {}) }));
+          CATEGORIES.splice(0, CATEGORIES.length, ...updated);
+        }
+      })
+      .catch(() => {});
+  }, [user]);
+
   // transactions subscription
   useEffectApp(() => {
     if (!user) { setTransactions([]); return; }
@@ -438,10 +587,11 @@ function App() {
 
   // budget subscription (feeds quick actions on home screen)
   useEffectApp(() => {
-    if (!user) { setBudgetItems([]); return; }
+    if (!user) { setEnvelopes([]); return; }
     return window.db.collection('users').doc(user.uid).collection('settings').doc('budget')
       .onSnapshot(doc => {
-        setBudgetItems(doc.exists && doc.data().items ? doc.data().items : []);
+        const d = doc.exists ? doc.data() : null;
+        setEnvelopes(d && d.envelopes && d.envelopes.length > 0 ? d.envelopes : (window.DEFAULT_ENVELOPES || []));
       });
   }, [user]);
 
@@ -454,7 +604,7 @@ function App() {
       .onSnapshot(doc => setMonthClosed(doc.exists));
   }, [user]);
 
-  const handleAdd = () => setAddOpen(true);
+  const handleAdd = (preset = {}) => { setAddPreset(preset); setAddOpen(true); };
   const handleLogout = async () => {
     try {
       await window.auth.signOut();
@@ -510,6 +660,7 @@ function App() {
       const mm = now.getMinutes().toString().padStart(2, '0');
       await window.db.collection('users').doc(user.uid).collection('transactions').add({
         cat: payload.cat,
+        envelope: payload.envelope || null,
         label: (CATEGORIES.find(c => c.id === payload.cat) || {}).label || payload.cat,
         amt,
         note: payload.note || null,
@@ -536,12 +687,67 @@ function App() {
     setNewGoalOpen(false);
   };
 
-  const handleDepositConfirm = async ({ pot, amount }) => {
+  const handleUpdateGoal = async (data) => {
+    if (!user || !data.id) return;
+    await window.db.collection('users').doc(user.uid).collection('goals').doc(data.id).update({
+      label: data.name,
+      target: data.amount,
+      color: data.color,
+      bg: data.bg,
+      icon: data.icon,
+      deadline: data.deadline || null,
+    });
+    setEditingGoal(null);
+  };
+
+  const handleApplyAdvisor = async (envelopes) => {
     if (!user) return;
-    await window.db.collection('users').doc(user.uid).collection('goals').doc(pot.id).update({
+    const total = envelopes.reduce((s, e) => s + e.total, 0);
+    await window.db.collection('users').doc(user.uid).collection('settings').doc('budget').set({
+      total, warnAt: 80, remindOn: true, envelopes,
+    });
+    setAdvisorOpen(false);
+    setBudgetOpen(false);
+  };
+
+  const handleDepositConfirm = async ({ pot, amount, source }) => {
+    if (!user) return;
+    const uid = user.uid;
+    await window.db.collection('users').doc(uid).collection('goals').doc(pot.id).update({
       saved: firebase.firestore.FieldValue.increment(amount),
     });
+    if (source && source.id !== 'main') {
+      await window.db.collection('users').doc(uid).collection('autopots').doc(source.id).update({
+        total: firebase.firestore.FieldValue.increment(-amount),
+      });
+    }
     setDepositPot(null);
+  };
+
+  const handleImportBalances = async (values) => {
+    if (!user) return;
+    const uid = user.uid;
+    const vaultEnvs = envelopes.filter(e => e.vault);
+    const batch = window.db.batch();
+    Object.entries(values).forEach(([envId, rawVal]) => {
+      const amount = parseFloat(rawVal) || 0;
+      if (amount <= 0) return;
+      const env = vaultEnvs.find(e => e.id === envId);
+      const existing = autoPots.find(p => p.id === envId);
+      const ref = window.db.collection('users').doc(uid).collection('autopots').doc(envId);
+      if (existing) {
+        batch.update(ref, { total: firebase.firestore.FieldValue.increment(amount) });
+      } else {
+        batch.set(ref, {
+          total: amount, monthly: 0, history: [],
+          label: env?.label || envId,
+          emoji: env?.emoji || '💰',
+          color: env?.color || '#FFB97A',
+          bg: env?.bg || '#FFE9D6',
+        });
+      }
+    });
+    await batch.commit();
   };
 
   const handleWithdrawConfirm = async ({ pot, amount }) => {
@@ -560,6 +766,10 @@ function App() {
   });
   const income = monthlyTxs.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0);
   const expense = Math.abs(monthlyTxs.filter(t => t.amt < 0).reduce((s, t) => s + t.amt, 0));
+  const catUsed = {};
+  monthlyTxs.filter(t => t.amt < 0).forEach(t => {
+    catUsed[t.cat] = (catUsed[t.cat] || 0) + Math.abs(t.amt);
+  });
   const todayTxs = transactions.filter(tx => {
     if (!tx.createdAt) return false;
     const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
@@ -580,10 +790,10 @@ function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} budgetItems={budgetItems} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
-      case 'stats': return <StatsScreen data={liveData} transactions={transactions}/>;
-      case 'diary': return <DiaryScreen transactions={transactions}/>;
-      case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} palette={tweaks.palette} foxState={foxState} transactions={transactions} budgetItems={budgetItems} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
+      case 'home': return <HomeScreen data={liveData} envelopes={envelopes} catUsed={catUsed} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
+      case 'stats': return <StatsScreen data={liveData} transactions={transactions} envelopes={envelopes}/>;
+      case 'diary': return <DiaryScreen transactions={transactions} onAdd={handleAdd}/>;
+      case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} palette={tweaks.palette} foxState={foxState} transactions={transactions} envelopes={envelopes} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
       default: return <HomeScreen data={liveData} foxMood={foxMood} onAdd={handleAdd}/>;
     }
   };
@@ -605,10 +815,15 @@ function App() {
         {renderScreen()}
       </div>
       <BottomNav current={tab} onSelect={setTab} onAdd={handleAdd} isMobile={true}/>
-        <AddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={handleSaved}/>
+        <AddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={handleSaved} envelopes={envelopes} preset={addPreset}/>
         {budgetOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
-            <BudgetScreen onClose={() => setBudgetOpen(false)} transactions={transactions}/>
+            <BudgetScreen onClose={() => setBudgetOpen(false)} onAdvisor={() => setAdvisorOpen(true)} foxName={foxState.name || '小桃'} transactions={transactions}/>
+          </div>
+        )}
+        {advisorOpen && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 80, animation: 'slide-up 0.3s ease-out' }}>
+            <FinancialAdvisorScreen onClose={() => setAdvisorOpen(false)} onApply={handleApplyAdvisor} foxFur={foxState.fur} foxAccessory={foxState.accessory} foxName={foxState.name || '小桃'}/>
           </div>
         )}
         {vaultOpen && (
@@ -618,8 +833,12 @@ function App() {
               onAddGoal={() => setNewGoalOpen(true)}
               onWithdraw={(pot) => setWithdrawPot(pot)}
               onDeposit={(pot) => setDepositPot(pot)}
+              onEditGoal={(pot) => setEditingGoal(pot)}
+              onOpenClose={() => { setVaultOpen(false); setCloseOpen(true); }}
+              onImport={handleImportBalances}
               goalPots={goalPots}
               autoPots={autoPots}
+              budgetEnvelopes={envelopes}
               foxFur={foxState.fur}
               foxAccessory={foxState.accessory}
             />
@@ -629,6 +848,13 @@ function App() {
           <NewGoalScreen
             onClose={() => setNewGoalOpen(false)}
             onSave={handleSaveGoal}
+          />
+        )}
+        {editingGoal && (
+          <NewGoalScreen
+            existing={editingGoal}
+            onClose={() => setEditingGoal(null)}
+            onSave={handleUpdateGoal}
           />
         )}
         {withdrawPot && (
@@ -662,23 +888,34 @@ function App() {
         {showOnboarding && (
           <OnboardingScreen
             onFinish={(data) => {
-              const { budget, pickedCats, ...fox } = data;
+              const { budget, pickedEnvs, advisorEnvelopes, ...fox } = data;
               const joinedAt = Date.now();
               setFoxState(s => ({ ...s, ...fox, joinedAt }));
               try { localStorage.setItem('onboardingDone', '1'); } catch {}
               setShowOnboarding(false);
               if (user) {
                 const uid = user.uid;
-                // Save fox profile to Firestore
                 window.db.collection('users').doc(uid).collection('settings').doc('profile').set({ ...fox, joinedAt });
-                // Build budget from picked categories (equal split, round to 500)
-                const perCat = pickedCats.length > 0
-                  ? Math.round(budget / pickedCats.length / 500) * 500
-                  : 0;
-                const budgetItems = pickedCats.map(id => ({ id, total: perCat, on: true, vault: true }));
-                window.db.collection('users').doc(uid).collection('settings').doc('budget').set({
-                  total: budget, warnAt: 80, remindOn: true, items: budgetItems,
-                });
+                if (advisorEnvelopes) {
+                  const total = advisorEnvelopes.reduce((s, e) => s + e.total, 0);
+                  window.db.collection('users').doc(uid).collection('settings').doc('budget').set({
+                    total, warnAt: 80, remindOn: true, envelopes: advisorEnvelopes,
+                  });
+                } else {
+                  const allEnvs = window.DEFAULT_ENVELOPES || [];
+                  const defaultTotal = allEnvs.reduce((s, e) => s + e.total, 0);
+                  const savedEnvelopes = allEnvs
+                    .filter(env => !pickedEnvs || pickedEnvs.includes(env.id))
+                    .map(env => ({
+                      ...env,
+                      total: defaultTotal > 0
+                        ? Math.round(budget * (env.total / defaultTotal) / 500) * 500
+                        : env.total,
+                    }));
+                  window.db.collection('users').doc(uid).collection('settings').doc('budget').set({
+                    total: budget, warnAt: 80, remindOn: true, envelopes: savedEnvelopes,
+                  });
+                }
               }
             }}
           />
@@ -690,6 +927,8 @@ function App() {
               onConfirm={() => setCloseOpen(false)}
               transactions={transactions}
               goalPots={goalPots}
+              foxFur={foxState.fur}
+              foxAccessory={foxState.accessory}
             />
           </div>
         )}
@@ -703,7 +942,7 @@ function App() {
             onClose={() => setPaletteOpen(false)}
           />
         )}
-        <Toast show={toast} withDiary={toastDiary} streak={liveData.streak} expGain={toastExpGain} isFirstToday={toastFirstToday}/>
+        <Toast show={toast} withDiary={toastDiary} streak={liveData.streak} expGain={toastExpGain} isFirstToday={toastFirstToday} foxFur={foxState.fur} foxAccessory={foxState.accessory}/>
         {levelUpInfo && <LevelUpOverlay info={levelUpInfo} foxState={foxState} onClose={() => { setLevelUpInfo(null); setFoxMoodOverride(null); }}/>}
       </div>
   );

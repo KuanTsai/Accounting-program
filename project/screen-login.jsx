@@ -28,7 +28,7 @@ function LoginScreen() {
 
       <div style={{ textAlign: 'center', marginBottom: 48 }}>
         <div className="hand" style={{ fontSize: 30, color: 'var(--ink)', lineHeight: 1.3 }}>
-          小桃の記帳日記
+          小桃の信封日記
         </div>
         <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 8 }}>
           Today is a lovely day ✿

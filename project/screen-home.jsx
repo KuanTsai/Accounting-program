@@ -30,7 +30,7 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // ─────────────────────────────────────────────────────────────
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
-function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onOpenPalette, onOpenSettings, showCloseBanner = true, budgetItems = [] }) {
+function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onOpenPalette, onOpenSettings, showCloseBanner = true, envelopes = [], catUsed = {} }) {
   const isNearMonthEnd = (() => {
     const d = new Date();
     const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
@@ -40,6 +40,34 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
   const _now = new Date();
   const monthLabel = `${_now.getMonth() + 1}月`;
   const todayLabel = `${_now.getMonth() + 1}/${_now.getDate()}`;
+
+  // envelope budget stats
+  const envsWithUsed = envelopes.map(env => ({
+    ...env,
+    used: (env.cats || []).reduce((s, catId) => s + (catUsed[catId] || 0), 0),
+  }));
+  const budgetTotal = envsWithUsed.reduce((s, e) => s + (e.total || 0), 0);
+  const budgetUsed = envsWithUsed.reduce((s, e) => s + e.used, 0);
+  const budgetRemaining = Math.max(0, budgetTotal - budgetUsed);
+  const budgetPct = budgetTotal > 0 ? Math.min((budgetUsed / budgetTotal) * 100, 100) : 0;
+  const budgetOver = budgetTotal > 0 && budgetUsed > budgetTotal;
+  const daysLeft = (() => {
+    const last = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate();
+    return Math.max(1, last - _now.getDate());
+  })();
+  // 每日可花：只算有 daily: true 的信封
+  const dailyEnvs = envsWithUsed.filter(e => e.daily);
+  const dailyBudget = dailyEnvs.reduce((s, e) => s + (e.total || 0), 0);
+  const dailyUsed = dailyEnvs.reduce((s, e) => s + e.used, 0);
+  const dailyRemaining = Math.max(0, dailyBudget - dailyUsed);
+  const dailyLeft = daysLeft > 0 && dailyRemaining > 0 ? Math.round(dailyRemaining / daysLeft) : 0;
+  // 今日剩餘：每天可花 − 今天在 daily 信封裡的花費
+  const dailyCatIds = new Set(dailyEnvs.flatMap(e => e.cats || []));
+  const todayDailySpent = (recent || []).filter(t => t.amt < 0 && dailyCatIds.has(t.cat))
+    .reduce((s, t) => s + Math.abs(t.amt), 0);
+  const todayRemaining = Math.max(0, dailyLeft - todayDailySpent);
+  const todayOver = dailyBudget > 0 && todayDailySpent > dailyLeft;
+  const useEnvelopeMode = budgetTotal > 0;
 
   return (
     <div style={{ paddingBottom: 100 }}>
@@ -131,34 +159,69 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
 
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 500 }}>
-              {monthLabel}結餘
+              {useEnvelopeMode ? `${monthLabel}預算剩餘` : `${monthLabel}結餘`}
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, color: 'var(--ink-faint)' }}>
-              <span className="hand-en">{todayLabel}</span>
-            </div>
+            <span className="hand-en" style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{todayLabel}</span>
           </div>
 
           <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 4 }}>
             <span style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 500 }}>NT$</span>
-            <span style={{ fontSize: 38, color: 'var(--ink)', fontWeight: 700, letterSpacing: -0.5 }}>
-              {balance.toLocaleString()}
+            <span style={{ fontSize: 38, fontWeight: 700, letterSpacing: -0.5, color: budgetOver ? '#D86A8A' : 'var(--ink)' }}>
+              {useEnvelopeMode ? budgetRemaining.toLocaleString() : balance.toLocaleString()}
             </span>
           </div>
 
-          <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
-            <div style={{ flex: 1, background: '#E2F4E8', borderRadius: 18, padding: '10px 14px' }}>
-              <div style={{ fontSize: 10, color: '#5BA37D', fontWeight: 600, letterSpacing: '0.05em' }}>＋ 收入</div>
-              <div style={{ fontSize: 18, color: '#3B8A5C', fontWeight: 700, marginTop: 2 }}>
-                ${income.toLocaleString()}
+          {useEnvelopeMode ? (
+            <>
+              {/* progress bar */}
+              <div style={{ marginTop: 14, background: '#F5EBE4', borderRadius: 999, height: 10, padding: 2 }}>
+                <div style={{
+                  height: '100%', borderRadius: 999,
+                  width: `${budgetPct}%`,
+                  background: budgetOver
+                    ? 'linear-gradient(90deg, #FFB97A 0%, #F08A8A 100%)'
+                    : 'linear-gradient(90deg, var(--accent) 0%, var(--secondary) 100%)',
+                  transition: 'width 0.4s',
+                }} />
+              </div>
+              <div style={{ fontSize: 10, color: budgetOver ? '#D86A8A' : 'var(--ink-soft)', marginTop: 6, textAlign: 'right', fontWeight: 500 }}>
+                {budgetOver
+                  ? `超支 $${(budgetUsed - budgetTotal).toLocaleString()} ！`
+                  : `已花 $${budgetUsed.toLocaleString()} ／ $${budgetTotal.toLocaleString()}`
+                }
+              </div>
+              {/* daily budget */}
+              <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+                <div style={{ flex: 1, background: budgetOver ? '#FFE0E0' : '#E2F4E8', borderRadius: 18, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 10, color: budgetOver ? '#D86A8A' : '#5BA37D', fontWeight: 600, letterSpacing: '0.05em' }}>每天可花</div>
+                  <div style={{ fontSize: 18, color: budgetOver ? '#D86A8A' : '#3B8A5C', fontWeight: 700, marginTop: 2 }}>
+                    ${budgetOver ? 0 : dailyLeft.toLocaleString()}
+                  </div>
+                </div>
+                <div style={{ flex: 1, background: todayOver ? '#FFE0E0' : 'var(--accent-faint)', borderRadius: 18, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, letterSpacing: '0.05em' }}>今日剩餘</div>
+                  <div style={{ fontSize: 18, color: todayOver ? '#D86A8A' : '#D86A8A', fontWeight: 700, marginTop: 2 }}>
+                    {todayOver ? '已超今日' : `$${todayRemaining.toLocaleString()}`}
+                  </div>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div style={{ display: 'flex', gap: 10, marginTop: 14 }}>
+              <div style={{ flex: 1, background: '#E2F4E8', borderRadius: 18, padding: '10px 14px' }}>
+                <div style={{ fontSize: 10, color: '#5BA37D', fontWeight: 600, letterSpacing: '0.05em' }}>＋ 收入</div>
+                <div style={{ fontSize: 18, color: '#3B8A5C', fontWeight: 700, marginTop: 2 }}>
+                  ${income.toLocaleString()}
+                </div>
+              </div>
+              <div style={{ flex: 1, background: 'var(--accent-faint)', borderRadius: 18, padding: '10px 14px' }}>
+                <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, letterSpacing: '0.05em' }}>− 支出</div>
+                <div style={{ fontSize: 18, color: '#D86A8A', fontWeight: 700, marginTop: 2 }}>
+                  ${expense.toLocaleString()}
+                </div>
               </div>
             </div>
-            <div style={{ flex: 1, background: 'var(--accent-faint)', borderRadius: 18, padding: '10px 14px' }}>
-              <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, letterSpacing: '0.05em' }}>− 支出</div>
-              <div style={{ fontSize: 18, color: '#D86A8A', fontWeight: 700, marginTop: 2 }}>
-                ${expense.toLocaleString()}
-              </div>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -169,29 +232,31 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
           <span style={{ fontSize: 11, color: 'var(--ink-faint)', fontFamily: 'Caveat', fontWeight: 600 }}>tap to add ♥</span>
         </div>
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-          {(budgetItems.filter(b => b.on).length > 0
-            ? budgetItems.filter(b => b.on).slice(0, 5)
-            : [
-                { id: 'drink', total: null }, { id: 'food', total: null },
-                { id: 'transport', total: null }, { id: 'shop', total: null }, { id: 'fun', total: null },
-              ]
-          ).map((q, i) => {
-            const cat = CATEGORIES.find(c => c.id === q.id) || { label: q.id };
-            return (
-              <div key={i} className="tap pop-in" onClick={onAdd} style={{
-                flexShrink: 0, background: 'var(--card)', borderRadius: 18,
-                padding: '10px 12px 12px', minWidth: 92,
-                boxShadow: 'var(--shadow-sm)',
-                border: '1px solid #F5E8E0'
-              }}>
-                <CatBubble id={q.id} size={36} />
-                <div style={{ fontSize: 12, color: 'var(--ink)', marginTop: 6, fontWeight: 500 }}>{cat.label}</div>
-                {q.total != null && (
-                  <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 1 }}>預算 ${q.total.toLocaleString()}</div>
-                )}
-              </div>
-            );
-          })}
+          {(() => {
+            const favCats = CATEGORIES.filter(c => c.fav);
+            const quickItems = favCats.length > 0
+              ? favCats.slice(0, 6).map(c => ({ id: c.id, envLabel: '' }))
+              : envelopes.length > 0
+                ? envelopes.flatMap(env => env.cats.map(catId => ({ id: catId, envLabel: env.label }))).slice(0, 6)
+                : [{ id: 'food' }, { id: 'drink' }, { id: 'transport' }, { id: 'shop' }, { id: 'fun' }];
+            return quickItems.map((q, i) => {
+              const cat = CATEGORIES.find(c => c.id === q.id) || { label: q.id };
+              return (
+                <div key={i} className="tap pop-in" onClick={() => onAdd({ cat: q.id, type: 'expense' })} style={{
+                  flexShrink: 0, background: 'var(--card)', borderRadius: 18,
+                  padding: '10px 12px 12px', minWidth: 92,
+                  boxShadow: 'var(--shadow-sm)',
+                  border: '1px solid #F5E8E0'
+                }}>
+                  <CatBubble id={q.id} size={36} />
+                  <div style={{ fontSize: 12, color: 'var(--ink)', marginTop: 6, fontWeight: 500 }}>{cat.label}</div>
+                  {q.envLabel && (
+                    <div style={{ fontSize: 10, color: 'var(--ink-faint)', marginTop: 1 }}>{q.envLabel}</div>
+                  )}
+                </div>
+              );
+            });
+          })()}
         </div>
       </div>
 

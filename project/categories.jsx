@@ -129,9 +129,12 @@ function CatIcon({ id, size = 24, color = '#fff' }) {
   }
 }
 
+const BUILTIN_IDS = ['food','drink','transport','shop','fun','beauty','home','health','study','gift','travel','salary'];
+
 // circular icon w/ background — used in lists, chips, etc
 function CatBubble({ id, size = 44 }) {
   const cat = CATEGORIES.find(c => c.id === id) || CATEGORIES[0];
+  const isBuiltin = BUILTIN_IDS.includes(id);
   return (
     <div style={{
       width: size, height: size, borderRadius: size / 2,
@@ -140,7 +143,10 @@ function CatBubble({ id, size = 44 }) {
       flexShrink: 0,
       boxShadow: `inset 0 -2px 0 ${cat.color}22`,
     }}>
-      <CatIcon id={id} size={size * 0.55} color={cat.color}/>
+      {(isBuiltin || cat.icon)
+        ? <CatIcon id={cat.icon || id} size={size * 0.55} color={cat.color}/>
+        : <span style={{ fontSize: size * 0.42, fontWeight: 700, color: cat.color, lineHeight: 1 }}>{(cat.label || '?')[0]}</span>
+      }
     </div>
   );
 }
@@ -171,8 +177,8 @@ function Tape({ color = 'var(--accent-soft)', rotate = -8, style = {} }) {
   return (
     <div style={{
       position: 'absolute', width: 70, height: 20,
-      background: color, opacity: 0.85,
-      backgroundImage: 'repeating-linear-gradient(45deg, transparent 0, transparent 5px, rgba(255,255,255,0.4) 5px, rgba(255,255,255,0.4) 9px)',
+      background: `repeating-linear-gradient(45deg, transparent 0, transparent 5px, rgba(255,255,255,0.4) 5px, rgba(255,255,255,0.4) 9px) ${color}`,
+      opacity: 0.85,
       transform: `rotate(${rotate}deg)`,
       boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
       ...style,

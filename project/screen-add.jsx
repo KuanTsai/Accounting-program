@@ -2,22 +2,67 @@
 
 const { useState: useStateAdd } = React;
 
-function AddScreen({ onClose, onSave }) {
+function AddScreen({ onClose, onSave, envelopes = [], preset = {} }) {
   const [amount, setAmount] = useStateAdd('0');
-  const [cat, setCat] = useStateAdd('food');
-  const [type, setType] = useStateAdd('expense'); // expense | income
+  const [pendingOp, setPendingOp] = useStateAdd(null);  // '+' | '−' | null
+  const [firstVal, setFirstVal] = useStateAdd(null);
+  const [cat, setCat] = useStateAdd(() => preset.cat || 'food');
+  const [type, setType] = useStateAdd(() => preset.type || 'expense'); // expense | income
   const [note, setNote] = useStateAdd('');
   const [mood, setMood] = useStateAdd(null);
-  const [diaryOpen, setDiaryOpen] = useStateAdd(false);
+  const [diaryOpen, setDiaryOpen] = useStateAdd(() => preset.diaryOpen || false);
   const [diaryText, setDiaryText] = useStateAdd('');
+  const [envelopeId, setEnvelopeId] = useStateAdd(null);
+
+  const derivedEnvId = (envelopes.find(env => env.cats && env.cats.includes(cat)) || {}).id || null;
+  const activeEnvId = envelopeId !== null ? envelopeId : derivedEnvId;
+  const activeEnv = envelopes.find(env => env.id === activeEnvId);
 
   const push = (key) => {
     if (key === 'del') {
-      setAmount(a => a.length <= 1 ? '0' : a.slice(0, -1));
+      if (pendingOp && amount === '0') {
+        // cancel pending op, restore firstVal
+        setAmount(String(firstVal));
+        setPendingOp(null);
+        setFirstVal(null);
+      } else {
+        setAmount(a => a.length <= 1 ? '0' : a.slice(0, -1));
+      }
       return;
     }
     if (key === '.') {
       if (!amount.includes('.')) setAmount(a => a + '.');
+      return;
+    }
+    if (key === '+' || key === '−') {
+      const cur = parseFloat(amount) || 0;
+      if (pendingOp) {
+        // chain: evaluate current pending op first, then set new op
+        const b = cur;
+        const result = pendingOp === '+' ? firstVal + b : firstVal - b;
+        const rounded = Math.round(result * 100) / 100;
+        setFirstVal(rounded);
+        setAmount('0');
+      } else {
+        setFirstVal(cur);
+        setAmount('0');
+      }
+      setPendingOp(key);
+      return;
+    }
+    if (key === '=') {
+      if (pendingOp && firstVal !== null) {
+        const b = parseFloat(amount) || 0;
+        const result = pendingOp === '+' ? firstVal + b : firstVal - b;
+        const rounded = Math.round(result * 100) / 100;
+        setAmount(String(Math.max(0, rounded)));
+        setPendingOp(null);
+        setFirstVal(null);
+      }
+      return;
+    }
+    if (key === '00') {
+      setAmount(a => a === '0' ? '0' : a + '00');
       return;
     }
     setAmount(a => a === '0' ? key : a + key);
@@ -54,7 +99,7 @@ function AddScreen({ onClose, onSave }) {
         <div className="tap" style={{
           padding: '6px 14px', borderRadius: 999, background: 'var(--accent)',
           color: '#fff', fontSize: 13, fontWeight: 600,
-        }} onClick={() => onSave({ amount, cat, type, note, mood, diary: diaryOpen ? diaryText.trim() : '' })}>
+        }} onClick={() => onSave({ amount, cat, type, note, mood, diary: diaryOpen ? diaryText.trim() : '', envelope: activeEnvId })}>
           完成
         </div>
       </div>
@@ -81,9 +126,14 @@ function AddScreen({ onClose, onSave }) {
       </div>
 
       {/* amount display */}
-      <div style={{ padding: '20px 24px 8px', textAlign: 'center' }}>
+      <div style={{ padding: '12px 24px 8px', textAlign: 'center' }}>
+        {pendingOp && (
+          <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 2, fontVariantNumeric: 'tabular-nums' }}>
+            {Number(firstVal).toLocaleString()} <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{pendingOp}</span>
+          </div>
+        )}
         <div style={{
-          display: 'inline-flex', alignItems: 'baseline', gap: 6, marginTop: 8,
+          display: 'inline-flex', alignItems: 'baseline', gap: 6,
           padding: '0 24px 6px', borderBottom: '2.5px dashed var(--accent-soft)',
         }}>
           <span style={{ fontSize: 22, color: type === 'expense' ? 'var(--accent)' : '#3B8A5C', fontWeight: 600 }}>
@@ -92,7 +142,7 @@ function AddScreen({ onClose, onSave }) {
           <span style={{
             fontSize: 56, color: 'var(--ink)', fontWeight: 700,
             fontVariantNumeric: 'tabular-nums',
-          }}>{Number(amount.replace(/[^0-9.]/g, '')).toLocaleString()}{amount.endsWith('.') ? '.' : ''}</span>
+          }}>{Number(amount).toLocaleString()}{amount.endsWith('.') ? '.' : ''}</span>
         </div>
       </div>
 
@@ -103,7 +153,7 @@ function AddScreen({ onClose, onSave }) {
           <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>已選：{CATEGORIES.find(c => c.id === cat)?.label}</span>
         </div>
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
-          {CATEGORIES.slice(0, 8).map(c => (
+          {CATEGORIES.map(c => (
             <div key={c.id} onClick={() => setCat(c.id)} className="tap" style={{
               flexShrink: 0, textAlign: 'center',
               padding: 6, borderRadius: 16,
@@ -117,6 +167,31 @@ function AddScreen({ onClose, onSave }) {
           ))}
         </div>
       </div>
+
+      {/* envelope picker */}
+      {envelopes.length > 0 && (
+        <div style={{ padding: '10px 20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div className="hand" style={{ fontSize: 17, color: 'var(--ink)' }}>信封預算</div>
+            <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>已選：{activeEnv?.label || '未分配'}</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            {envelopes.map(env => (
+              <div key={env.id} onClick={() => setEnvelopeId(activeEnvId === env.id ? null : env.id)} className="tap" style={{
+                flexShrink: 0, padding: '6px 12px', borderRadius: 999,
+                background: activeEnvId === env.id ? env.bg : '#fff',
+                border: `1.5px solid ${activeEnvId === env.id ? env.color : 'transparent'}`,
+                boxShadow: 'var(--shadow-sm)',
+                display: 'flex', alignItems: 'center', gap: 5,
+                transition: 'all 0.15s',
+              }}>
+                <span style={{ fontSize: 14 }}>{env.emoji}</span>
+                <span style={{ fontSize: 12, fontWeight: 600, color: activeEnvId === env.id ? env.color : 'var(--ink-soft)' }}>{env.label}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* mood + note */}
       <div style={{ padding: '12px 20px 0' }}>
@@ -228,10 +303,11 @@ function AddScreen({ onClose, onSave }) {
           ].map((k, i) => {
             const isOp = ['+', '−', '=', 'del'].includes(k);
             const isPrimary = k === '=';
+            const isActivePendingOp = k === pendingOp;
             return (
               <div key={i} onClick={() => push(k)} className="tap" style={{
-                background: isPrimary ? 'var(--accent)' : isOp ? 'var(--accent-faint)' : '#fff',
-                color: isPrimary ? '#fff' : isOp ? 'var(--accent)' : 'var(--ink)',
+                background: isPrimary ? 'var(--accent)' : isActivePendingOp ? 'var(--accent)' : isOp ? 'var(--accent-faint)' : '#fff',
+                color: isPrimary || isActivePendingOp ? '#fff' : isOp ? 'var(--accent)' : 'var(--ink)',
                 borderRadius: 18,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 22, fontWeight: 600,

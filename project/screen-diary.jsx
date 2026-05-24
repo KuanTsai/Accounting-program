@@ -4,7 +4,7 @@ const TAPE_COLORS = ['var(--accent-soft)', 'var(--lavender)', 'var(--secondary-s
 const DAY_NAMES = ['日', '一', '二', '三', '四', '五', '六'];
 const WEEK_LABELS = ['一', '二', '三', '四', '五', '六', '日'];
 
-function DiaryScreen({ transactions = [] }) {
+function DiaryScreen({ transactions = [], onAdd }) {
   const diaryEntries = transactions
     .filter(tx => tx.diary && tx.diary.trim())
     .map((tx, i) => {
@@ -40,7 +40,7 @@ function DiaryScreen({ transactions = [] }) {
         title="我的日記"
         subtitle="Dear diary ♡"
         right={
-          <div className="tap" style={{
+          <div className="tap" onClick={() => onAdd && onAdd({ diaryOpen: true })} style={{
             width: 38, height: 38, borderRadius: 12, background: 'var(--accent)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
             boxShadow: '0 3px 8px rgba(255,143,171,0.4)',

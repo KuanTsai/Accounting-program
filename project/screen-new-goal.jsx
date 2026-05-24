@@ -24,14 +24,21 @@ const GOAL_COLORS = [
   { color: '#7DCBC4', bg: '#D8F0EE' },
 ];
 
-const AMOUNT_PRESETS = [10000, 30000, 50000, 100000, 300000];
+const AMOUNT_PRESETS = [30000, 50000, 100000, 500000, 1000000];
 
-function NewGoalScreen({ onClose, onSave }) {
-  const [name, setName] = useStateGoal('');
-  const [amount, setAmount] = useStateGoal(30000);
-  const [icon, setIcon] = useStateGoal('travel');
-  const [colorIdx, setColorIdx] = useStateGoal(0);
-  const [deadline, setDeadline] = useStateGoal(null);
+function NewGoalScreen({ onClose, onSave, existing = null }) {
+  const isEdit = !!existing;
+  const initColorIdx = existing
+    ? Math.max(0, GOAL_COLORS.findIndex(c => c.color === existing.color))
+    : 0;
+
+  const [name, setName] = useStateGoal(existing?.label || '');
+  const [amount, setAmount] = useStateGoal(existing?.target || 30000);
+  const [amtRaw, setAmtRaw] = useStateGoal('');
+  const [amtEditing, setAmtEditing] = useStateGoal(false);
+  const [icon, setIcon] = useStateGoal(existing?.icon || 'travel');
+  const [colorIdx, setColorIdx] = useStateGoal(initColorIdx);
+  const [deadline, setDeadline] = useStateGoal(existing?.deadline || null);
   const [initial, setInitial] = useStateGoal(0);
 
   const c = GOAL_COLORS[colorIdx];
@@ -60,14 +67,16 @@ function NewGoalScreen({ onClose, onSave }) {
           <span className="tap" onClick={onClose} style={{ fontSize: 14, color: 'var(--ink-soft)', padding: '6px 4px' }}>
             取消
           </span>
-          <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>新的存錢目標</div>
+          <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>
+            {isEdit ? '編輯目標' : '新的存錢目標'}
+          </div>
           <span
             className="tap"
-            onClick={() => canSave && onSave({ name, amount, icon, color: c.color, bg: c.bg, deadline, initial })}
+            onClick={() => canSave && onSave({ id: existing?.id, name, amount, icon, color: c.color, bg: c.bg, deadline, initial: isEdit ? undefined : initial })}
             style={{
               fontSize: 14, color: canSave ? 'var(--accent)' : 'var(--ink-faint)',
               fontWeight: 700, padding: '6px 4px',
-            }}>建立</span>
+            }}>{isEdit ? '儲存' : '建立'}</span>
         </div>
 
         {/* preview card */}
@@ -141,22 +150,49 @@ function NewGoalScreen({ onClose, onSave }) {
 
         {/* amount */}
         <div style={{ padding: '18px 20px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <div style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 600 }}>目標金額</div>
-            <span style={{ fontSize: 18, color: 'var(--accent)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-              NT$ {amount.toLocaleString()}
-            </span>
-          </div>
+          <div style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 600, marginBottom: 8 }}>目標金額</div>
           <div style={{
-            background: 'var(--card)', borderRadius: 14, padding: '14px 14px 12px',
+            background: 'var(--card)', borderRadius: 14, padding: '16px 14px 12px',
             boxShadow: 'var(--shadow-sm)',
           }}>
-            <input
-              type="range" min={1000} max={500000} step={1000}
-              value={amount} onChange={e => setAmount(Number(e.target.value))}
-              style={{ width: '100%', accentColor: 'var(--accent)' }}
-            />
-            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
+              <span style={{ fontSize: 14, color: 'var(--ink-soft)', fontWeight: 600 }}>NT$</span>
+              {amtEditing ? (
+                <input
+                  autoFocus
+                  type="number"
+                  value={amtRaw}
+                  onChange={e => setAmtRaw(e.target.value)}
+                  onBlur={() => {
+                    const n = parseInt(amtRaw, 10);
+                    if (!isNaN(n) && n > 0) setAmount(n);
+                    setAmtEditing(false);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') e.target.blur();
+                    if (e.key === 'Escape') setAmtEditing(false);
+                  }}
+                  style={{
+                    fontSize: 32, fontWeight: 700, letterSpacing: -0.3,
+                    border: 'none', outline: 'none', background: 'transparent',
+                    color: 'var(--accent)', width: 180,
+                    borderBottom: '2px dashed var(--accent)',
+                  }}
+                />
+              ) : (
+                <span
+                  className="tap"
+                  onClick={() => { setAmtRaw(String(amount)); setAmtEditing(true); }}
+                  style={{
+                    fontSize: 32, color: 'var(--ink)', fontWeight: 700, letterSpacing: -0.3,
+                    borderBottom: '2px dashed var(--accent-soft)',
+                  }}
+                >
+                  {amount.toLocaleString()}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
               {AMOUNT_PRESETS.map(p => (
                 <span key={p} className="tap" onClick={() => setAmount(p)} style={{
                   flex: 1, textAlign: 'center',
@@ -244,8 +280,8 @@ function NewGoalScreen({ onClose, onSave }) {
           </div>
         </div>
 
-        {/* initial deposit */}
-        <div style={{ padding: '18px 20px 0' }}>
+        {/* initial deposit — only for new goals */}
+        {!isEdit && <div style={{ padding: '18px 20px 0' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
             <div style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 600 }}>初始撥款（選填）</div>
             <span style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
@@ -265,7 +301,7 @@ function NewGoalScreen({ onClose, onSave }) {
               先放一筆讓目標起步，會從主帳戶扣除。
             </div>
           </div>
-        </div>
+        </div>}
 
         {/* fox tip */}
         <div style={{ padding: '18px 20px 0' }}>

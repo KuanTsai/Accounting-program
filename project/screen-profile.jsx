@@ -2,12 +2,11 @@
 
 const PALETTE_LABELS = { sakura: '櫻花', mint: '薄荷', lavender: '薰衣草', peach: '蜜桃', navy: '夜空' };
 
-function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox, onOpenPalette, onOpenSettings, palette = 'sakura', foxState = {}, transactions = [], budgetItems = [], goalPots = [], autoPots = [], liveData = {} }) {
+function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox, onOpenPalette, onOpenSettings, palette = 'sakura', foxState = {}, transactions = [], envelopes = [], goalPots = [], autoPots = [], liveData = {} }) {
   const now = new Date();
 
   // ── budget stats ──────────────────────────────────────
-  const enabledItems = budgetItems.filter(b => b.on);
-  const budgetTotal = enabledItems.reduce((s, b) => s + b.total, 0);
+  const budgetTotal = envelopes.reduce((s, env) => s + (env.total || 0), 0);
   const catUsed = {};
   transactions.forEach(tx => {
     if (!tx.createdAt || tx.amt >= 0) return;
@@ -21,7 +20,10 @@ function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox,
   const remaining = Math.max(0, budgetTotal - totalUsed);
   const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
   const dailyLeft = daysLeft > 0 && remaining > 0 ? Math.round(remaining / daysLeft) : 0;
-  const topBudgets = enabledItems.slice(0, 4).map(b => ({ ...b, used: catUsed[b.id] || 0 }));
+  const topEnvelopes = envelopes.slice(0, 4).map(env => ({
+    ...env,
+    used: (env.cats || []).reduce((s, cid) => s + (catUsed[cid] || 0), 0),
+  }));
 
   // ── vault totals ──────────────────────────────────────
   const vaultTotal = autoPots.reduce((s, p) => s + (p.total || 0), 0)
@@ -182,10 +184,8 @@ function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox,
               </div>
             </div>
 
-            {topBudgets.map((b, i) => {
-              const cat = CATEGORIES.find(c => c.id === b.id);
-              if (!cat) return null;
-              const pct = b.total > 0 ? (b.used / b.total) * 100 : 0;
+            {topEnvelopes.map((env, i) => {
+              const pct = env.total > 0 ? (env.used / env.total) * 100 : 0;
               const over = pct > 100;
               const warn = pct > 85;
               return (
@@ -193,18 +193,18 @@ function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox,
                   display: 'flex', alignItems: 'center', gap: 10,
                   padding: '10px 0', borderTop: '1px dashed #F5E5DC',
                 }}>
-                  <CatBubble id={b.id} size={32}/>
+                  <div style={{ width: 32, height: 32, borderRadius: 10, background: env.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0 }}>{env.emoji}</div>
                   <div style={{ flex: 1 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                      <span style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{cat.label}</span>
+                      <span style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 500 }}>{env.label}</span>
                       <span style={{ fontSize: 12, color: over ? '#D86A8A' : 'var(--ink-soft)', fontVariantNumeric: 'tabular-nums' }}>
-                        ${b.used.toLocaleString()} / ${b.total.toLocaleString()}
+                        ${env.used.toLocaleString()} / ${env.total.toLocaleString()}
                       </span>
                     </div>
                     <div style={{ background: '#F5EBE4', height: 6, borderRadius: 3, overflow: 'hidden' }}>
                       <div style={{
                         height: '100%', width: `${Math.min(pct, 100)}%`,
-                        background: over ? '#D86A8A' : warn ? 'var(--secondary)' : cat.color,
+                        background: over ? '#D86A8A' : warn ? 'var(--secondary)' : env.color,
                         borderRadius: 3,
                       }}/>
                     </div>
@@ -246,7 +246,7 @@ function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox,
           {[
             { id: 'theme',   label: '主題色',       value: PALETTE_LABELS[palette] || '櫻花',  color: '#EEE8FF', icon: 'beauty', onClick: onOpenPalette },
             { id: 'cat',     label: '分類管理',     value: '管理分類',                         color: '#FFE5EC', icon: 'shop',   onClick: onOpenCategories },
-            { id: 'budget',  label: '預算管理',     value: budgetTotal > 0 ? `$${budgetTotal.toLocaleString()}` : '未設定', color: '#E2F4E8', icon: 'salary', onClick: onOpenBudget },
+            { id: 'budget',  label: '預算管理',     value: budgetTotal > 0 ? `信封 $${budgetTotal.toLocaleString()}` : '未設定', color: '#E2F4E8', icon: 'salary', onClick: onOpenBudget },
             { id: 'vault',   label: '我的金庫',     value: `NT$${vaultTotal.toLocaleString()}`, color: '#FFF4D1', icon: 'travel', onClick: onOpenVault },
             { id: 'fox',     label: '狐狸狀態',     value: `Lv.${foxState.level || 1} · ${foxState.name || '小桃'}`, color: '#FFE0EE', icon: 'beauty', onClick: onOpenFox },
           ].map((s, i, arr) => (
