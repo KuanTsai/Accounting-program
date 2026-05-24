@@ -74,10 +74,15 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
         if (existing.exists) {
           const hist = (existing.data().history || []).slice(0, 11);
           hist.unshift([closeMonthLabel, it.leftover]);
-          await potRef.update({ total: firebase.firestore.FieldValue.increment(it.leftover), monthly: it.leftover, history: hist });
+          await potRef.update({
+            total: firebase.firestore.FieldValue.increment(it.leftover),
+            monthly: it.leftover, history: hist,
+            emoji: it.emoji, color: it.color, bg: it.bg,
+          });
         } else {
           await potRef.set({
             envId: it.envId, label: `${it.label}金庫`,
+            emoji: it.emoji, color: it.color, bg: it.bg,
             total: it.leftover, monthly: it.leftover,
             history: [[closeMonthLabel, it.leftover]],
             createdAt: firebase.firestore.FieldValue.serverTimestamp(),

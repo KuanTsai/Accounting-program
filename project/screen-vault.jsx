@@ -189,7 +189,9 @@ function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, onEditGoal, go
 }
 
 function AutoPotCard({ pot, onWithdraw }) {
-  const cat = CATEGORIES.find(c => c.id === pot.catId) || { color: '#888', bg: '#eee' };
+  const color = pot.color || '#FFB97A';
+  const bg = pot.bg || '#FFE9D6';
+  const emoji = pot.emoji || '💰';
   return (
     <div style={{
       background: 'var(--card)', borderRadius: 20, padding: '14px 16px',
@@ -197,7 +199,11 @@ function AutoPotCard({ pot, onWithdraw }) {
     }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ position: 'relative' }}>
-          <CatBubble id={pot.catId} size={42}/>
+          <div style={{
+            width: 42, height: 42, borderRadius: 13, background: bg,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 20, flexShrink: 0,
+          }}>{emoji}</div>
           <div style={{
             position: 'absolute', bottom: -4, right: -4,
             width: 18, height: 18, borderRadius: 9,
@@ -230,7 +236,7 @@ function AutoPotCard({ pot, onWithdraw }) {
           const h2 = Math.max(4, (h[1] / max) * 22);
           return (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
-              <div style={{ width: '100%', height: h2, background: cat.color, opacity: 0.35, borderRadius: 3 }}/>
+              <div style={{ width: '100%', height: h2, background: color, opacity: 0.4, borderRadius: 3 }}/>
               <span style={{ fontSize: 8, color: 'var(--ink-faint)' }}>{h[0]}</span>
             </div>
           );
