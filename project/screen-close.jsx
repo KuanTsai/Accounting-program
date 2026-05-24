@@ -316,6 +316,79 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
 }
 
 // ── Confirmation overlay (fox ceremony) ──────────────
+function ShareCardOverlay({ totalSaved, thisTotal, txCount, savedMore, diffPct, closeMonthLabel, closeYear, tagline, foxFur, foxAccessory, onClose }) {
+  const doShare = () => {
+    const text = `🦊 ${closeYear}年${closeMonthLabel}我用小桃信封日記省了 $${totalSaved.toLocaleString()}！\n用信封理財法，養成存錢小習慣 ✿\nhttps://kuantsai.github.io/Accounting-program/`;
+    if (navigator.share) {
+      navigator.share({ title: '小桃の信封日記 月結報告', text }).catch(() => {});
+    }
+  };
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 99, background: 'rgba(30,20,25,0.82)', backdropFilter: 'blur(10px)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 24px' }}>
+      {/* card */}
+      <div style={{ width: '100%', maxWidth: 340, borderRadius: 28, overflow: 'hidden', boxShadow: '0 24px 60px rgba(0,0,0,0.4)' }}>
+        {/* header gradient */}
+        <div style={{ background: 'linear-gradient(135deg, #FF8FAB 0%, #FFB97A 100%)', padding: '22px 22px 18px', textAlign: 'center', position: 'relative' }}>
+          <div style={{ position: 'absolute', top: 12, left: 16, fontSize: 14, color: 'rgba(255,255,255,0.7)' }}>✦</div>
+          <div style={{ position: 'absolute', top: 16, right: 20, fontSize: 10, color: 'rgba(255,255,255,0.6)' }}>★</div>
+          <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.9)', fontWeight: 700, letterSpacing: '0.05em', marginBottom: 8 }}>小桃の信封日記</div>
+          <Fox mood="celebrate" size={72} fur={foxFur} accessory={foxAccessory}/>
+          <div className="hand" style={{ fontSize: 20, color: '#fff', marginTop: 6 }}>{closeYear}年{closeMonthLabel} 月結報告</div>
+        </div>
+
+        {/* body */}
+        <div style={{ background: '#FFFAF5', padding: '18px 20px 20px' }}>
+          {/* big numbers */}
+          <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
+            <div style={{ flex: 1, background: '#FFF1E8', borderRadius: 16, padding: '12px 14px', textAlign: 'center' }}>
+              <div style={{ fontSize: 10, color: '#B07050', fontWeight: 600, marginBottom: 4 }}>本月支出</div>
+              <div style={{ fontSize: 22, fontWeight: 800, color: '#4A3A35', fontVariantNumeric: 'tabular-nums' }}>${thisTotal.toLocaleString()}</div>
+            </div>
+            {totalSaved > 0 && (
+              <div style={{ flex: 1, background: '#FFF0F4', borderRadius: 16, padding: '12px 14px', textAlign: 'center' }}>
+                <div style={{ fontSize: 10, color: '#B05070', fontWeight: 600, marginBottom: 4 }}>省下入庫</div>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#D86A8A', fontVariantNumeric: 'tabular-nums' }}>+${totalSaved.toLocaleString()}</div>
+              </div>
+            )}
+          </div>
+
+          {/* badges */}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+            <div style={{ padding: '4px 12px', borderRadius: 999, background: '#F0EEF8', fontSize: 12, color: '#7B6BA8', fontWeight: 600 }}>
+              📝 記了 {txCount} 筆
+            </div>
+            {diffPct > 0 && (
+              <div style={{ padding: '4px 12px', borderRadius: 999, background: savedMore ? '#E8F8EE' : '#FFF4E0', fontSize: 12, color: savedMore ? '#3B8A5C' : '#A0700A', fontWeight: 600 }}>
+                {savedMore ? `↓ 比上月省 ${diffPct}%` : `↑ 比上月多 ${diffPct}%`}
+              </div>
+            )}
+          </div>
+
+          {/* tagline */}
+          <div style={{ textAlign: 'center', fontSize: 13, color: '#8C7670', fontStyle: 'italic', borderTop: '1px dashed #F5E5DC', paddingTop: 12, marginBottom: 10, lineHeight: 1.6 }}>
+            「{tagline}」
+          </div>
+
+          <div style={{ textAlign: 'center', fontSize: 10, color: '#C4ADA5' }}>
+            🦊 kuantsai.github.io/Accounting-program
+          </div>
+        </div>
+      </div>
+
+      {/* actions */}
+      <div style={{ display: 'flex', gap: 10, marginTop: 20, width: '100%', maxWidth: 340 }}>
+        <div className="tap" onClick={onClose} style={{ flex: 1, padding: '13px', borderRadius: 16, background: 'rgba(255,255,255,0.15)', textAlign: 'center', fontSize: 14, color: '#fff', fontWeight: 600 }}>關閉</div>
+        {navigator.share && (
+          <div className="tap" onClick={doShare} style={{ flex: 2, padding: '13px', borderRadius: 16, background: 'linear-gradient(135deg, #FF8FAB 0%, #FFB97A 100%)', textAlign: 'center', fontSize: 14, color: '#fff', fontWeight: 700 }}>分享 ↑</div>
+        )}
+      </div>
+      {!navigator.share && (
+        <div style={{ marginTop: 12, fontSize: 12, color: 'rgba(255,255,255,0.6)', textAlign: 'center' }}>截圖來分享這個月的成果 ✿</div>
+      )}
+    </div>
+  );
+}
+
 function ConfirmOverlay({ totalSaved, totalRollover, transactions, goalPots, closeMonth, closeYear, closeMonthLabel, foxFur = 'orange', foxAccessory = 'none', onClose }) {
   const thisMonthExp = transactions.filter(tx => {
     if (!tx.createdAt || tx.amt >= 0) return false;
@@ -363,6 +436,8 @@ function ConfirmOverlay({ totalSaved, totalRollover, transactions, goalPots, clo
   const tagline = totalSaved > 4000 ? '比上個月還會存錢，超棒的 ✿'
     : totalSaved > 1000 ? '小小的努力會變成大大的存款 ♥'
     : '有開始就是進步，下個月再加油！';
+
+  const [shareOpen, setShareOpen] = useStateClose(false);
 
   return (
     <div style={{ height: '100%', background: 'var(--bg)', display: 'flex', flexDirection: 'column', alignItems: 'center', padding: '0 20px', position: 'relative', overflow: 'hidden' }}>
@@ -412,11 +487,33 @@ function ConfirmOverlay({ totalSaved, totalRollover, transactions, goalPots, clo
         </div>
       </div>
 
-      <div style={{ width: '100%', padding: '12px 0 20px' }}>
-        <div className="tap" onClick={onClose} style={{ background: 'var(--accent)', borderRadius: 16, padding: '14px 0', textAlign: 'center', color: '#fff', fontSize: 15, fontWeight: 700, boxShadow: '0 6px 16px rgba(255,143,171,0.35)' }}>
-          收下，下月加油！
-        </div>
+      <div style={{ width: '100%', padding: '12px 0 20px', display: 'flex', gap: 10 }}>
+        <div className="tap" onClick={() => setShareOpen(true)} style={{
+          flex: 1, background: 'var(--accent-faint)', borderRadius: 16, padding: '14px 0',
+          textAlign: 'center', color: 'var(--accent)', fontSize: 14, fontWeight: 700,
+        }}>分享月結 📤</div>
+        <div className="tap" onClick={onClose} style={{
+          flex: 2, background: 'var(--accent)', borderRadius: 16, padding: '14px 0',
+          textAlign: 'center', color: '#fff', fontSize: 15, fontWeight: 700,
+          boxShadow: '0 6px 16px rgba(255,143,171,0.35)',
+        }}>收下，下月加油！</div>
       </div>
+
+      {shareOpen && (
+        <ShareCardOverlay
+          totalSaved={totalSaved}
+          thisTotal={thisTotal}
+          txCount={thisMonthExp.length}
+          savedMore={savedMore}
+          diffPct={diffPct}
+          closeMonthLabel={closeMonthLabel}
+          closeYear={closeYear}
+          tagline={tagline}
+          foxFur={foxFur}
+          foxAccessory={foxAccessory}
+          onClose={() => setShareOpen(false)}
+        />
+      )}
     </div>
   );
 }

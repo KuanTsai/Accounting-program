@@ -30,7 +30,7 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // ─────────────────────────────────────────────────────────────
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
-function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onOpenPalette, onOpenSettings, showCloseBanner = true, envelopes = [], catUsed = {} }) {
+function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onEdit, onOpenPalette, onOpenSettings, showCloseBanner = true, envelopes = [], catUsed = {} }) {
   const isNearMonthEnd = (() => {
     const d = new Date();
     const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
@@ -270,7 +270,7 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
           {recent.length === 0
             ? <div style={{ padding: '24px 16px', textAlign: 'center', fontSize: 13, color: 'var(--ink-faint)' }}>還沒有記錄，點 ＋ 開始記帳 ✿</div>
             : recent.slice(0, 5).map((tx, i, arr) =>
-              <TxRow key={tx.id || i} tx={tx} isLast={i === arr.length - 1} onDelete={onDelete} />
+              <TxRow key={tx.id || i} tx={tx} isLast={i === arr.length - 1} onDelete={onDelete} onEdit={onEdit} />
             )
           }
         </div>
@@ -279,7 +279,7 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
 
 }
 
-function TxRow({ tx, isLast, onDelete }) {
+function TxRow({ tx, isLast, onDelete, onEdit }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
@@ -309,18 +309,25 @@ function TxRow({ tx, isLast, onDelete }) {
           display: 'flex', gap: 8, padding: '0 16px 12px',
           borderBottom: isLast ? 'none' : '1px dashed #F5E5DC',
         }}>
+          {onEdit && (
+            <div className="tap" onClick={() => { onEdit(tx); setExpanded(false); }} style={{
+              flex: 1, padding: '8px', borderRadius: 12,
+              background: '#EEF4FF', textAlign: 'center',
+              fontSize: 13, color: '#5B82D4', fontWeight: 600,
+            }}>✏️ 編輯</div>
+          )}
           {onDelete && (
             <div className="tap" onClick={() => { onDelete(tx.id); setExpanded(false); }} style={{
               flex: 1, padding: '8px', borderRadius: 12,
               background: 'var(--accent-faint)', textAlign: 'center',
               fontSize: 13, color: 'var(--accent)', fontWeight: 600,
-            }}>🗑 刪除這筆</div>
+            }}>🗑 刪除</div>
           )}
           <div className="tap" onClick={() => setExpanded(false)} style={{
-            padding: '8px 16px', borderRadius: 12,
+            padding: '8px 12px', borderRadius: 12,
             background: '#f5f5f5', textAlign: 'center',
             fontSize: 13, color: 'var(--ink-soft)', fontWeight: 600,
-          }}>取消</div>
+          }}>✕</div>
         </div>
       )}
     </div>

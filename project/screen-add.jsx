@@ -2,17 +2,18 @@
 
 const { useState: useStateAdd } = React;
 
-function AddScreen({ onClose, onSave, envelopes = [], preset = {} }) {
-  const [amount, setAmount] = useStateAdd('0');
-  const [pendingOp, setPendingOp] = useStateAdd(null);  // '+' | '−' | null
+function AddScreen({ onClose, onSave, envelopes = [], preset = {}, existing = null }) {
+  const isEdit = !!existing;
+  const [amount, setAmount] = useStateAdd(() => existing ? String(Math.abs(existing.amt)) : '0');
+  const [pendingOp, setPendingOp] = useStateAdd(null);
   const [firstVal, setFirstVal] = useStateAdd(null);
-  const [cat, setCat] = useStateAdd(() => preset.cat || 'food');
-  const [type, setType] = useStateAdd(() => preset.type || 'expense'); // expense | income
-  const [note, setNote] = useStateAdd('');
-  const [mood, setMood] = useStateAdd(null);
-  const [diaryOpen, setDiaryOpen] = useStateAdd(() => preset.diaryOpen || false);
-  const [diaryText, setDiaryText] = useStateAdd('');
-  const [envelopeId, setEnvelopeId] = useStateAdd(null);
+  const [cat, setCat] = useStateAdd(() => existing?.cat || preset.cat || 'food');
+  const [type, setType] = useStateAdd(() => existing ? (existing.amt > 0 ? 'income' : 'expense') : (preset.type || 'expense'));
+  const [note, setNote] = useStateAdd(() => existing?.note || '');
+  const [mood, setMood] = useStateAdd(() => existing?.mood || null);
+  const [diaryOpen, setDiaryOpen] = useStateAdd(() => !!(existing?.diary) || preset.diaryOpen || false);
+  const [diaryText, setDiaryText] = useStateAdd(() => existing?.diary || '');
+  const [envelopeId, setEnvelopeId] = useStateAdd(() => existing?.envelope || null);
 
   const derivedEnvId = (envelopes.find(env => env.cats && env.cats.includes(cat)) || {}).id || null;
   const activeEnvId = envelopeId !== null ? envelopeId : derivedEnvId;
@@ -95,11 +96,11 @@ function AddScreen({ onClose, onSave, envelopes = [], preset = {} }) {
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </div>
-        <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>新的一筆</div>
+        <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>{isEdit ? '編輯這筆' : '新的一筆'}</div>
         <div className="tap" style={{
           padding: '6px 14px', borderRadius: 999, background: 'var(--accent)',
           color: '#fff', fontSize: 13, fontWeight: 600,
-        }} onClick={() => onSave({ amount, cat, type, note, mood, diary: diaryOpen ? diaryText.trim() : '', envelope: activeEnvId })}>
+        }} onClick={() => onSave({ amount, cat, type, note, mood, diary: diaryOpen ? diaryText.trim() : '', envelope: activeEnvId, ...(isEdit ? { id: existing.id } : {}) })}>
           完成
         </div>
       </div>

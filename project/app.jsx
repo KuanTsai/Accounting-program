@@ -185,7 +185,7 @@ function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   );
 }
 
-const APP_VERSION = 'v0.2.8';
+const APP_VERSION = 'v0.2.9';
 
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -474,6 +474,7 @@ function App() {
   const [withdrawPot, setWithdrawPot] = useStateApp(null);
   const [depositPot, setDepositPot] = useStateApp(null);
   const [advisorOpen, setAdvisorOpen] = useStateApp(false);
+  const [editingTx, setEditingTx] = useStateApp(null);
   const [categoriesOpen, setCategoriesOpen] = useStateApp(false);
   const [foxOpen, setFoxOpen] = useStateApp(false);
   const [paletteOpen, setPaletteOpen] = useStateApp(false);
@@ -615,6 +616,22 @@ function App() {
   const handleDelete = async (txId) => {
     if (!user || !txId) return;
     await window.db.collection('users').doc(user.uid).collection('transactions').doc(txId).delete();
+  };
+
+  const handleUpdateTx = async (payload) => {
+    if (!user || !payload.id) return;
+    const raw = parseFloat(payload.amount) || 0;
+    const amt = payload.type === 'expense' ? -raw : raw;
+    await window.db.collection('users').doc(user.uid).collection('transactions').doc(payload.id).update({
+      cat: payload.cat,
+      envelope: payload.envelope || null,
+      label: (CATEGORIES.find(c => c.id === payload.cat) || {}).label || payload.cat,
+      amt,
+      note: payload.note || null,
+      mood: payload.mood || null,
+      diary: payload.diary || null,
+    });
+    setEditingTx(null);
   };
 
   const gainExp = (amount) => {
@@ -790,7 +807,7 @@ function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} envelopes={envelopes} catUsed={catUsed} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
+      case 'home': return <HomeScreen data={liveData} envelopes={envelopes} catUsed={catUsed} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} onEdit={setEditingTx} showCloseBanner={!monthClosed}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions} envelopes={envelopes}/>;
       case 'diary': return <DiaryScreen transactions={transactions} onAdd={handleAdd}/>;
       case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} palette={tweaks.palette} foxState={foxState} transactions={transactions} envelopes={envelopes} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
@@ -816,6 +833,11 @@ function App() {
       </div>
       <BottomNav current={tab} onSelect={setTab} onAdd={handleAdd} isMobile={true}/>
         <AddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={handleSaved} envelopes={envelopes} preset={addPreset}/>
+        {editingTx && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
+            <AddScreen existing={editingTx} envelopes={envelopes} onClose={() => setEditingTx(null)} onSave={handleUpdateTx}/>
+          </div>
+        )}
         {budgetOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
             <BudgetScreen onClose={() => setBudgetOpen(false)} onAdvisor={() => setAdvisorOpen(true)} foxName={foxState.name || '小桃'} transactions={transactions}/>
