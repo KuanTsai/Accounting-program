@@ -240,12 +240,13 @@ function AutoPotCard({ pot, onWithdraw }) {
       {/* mini history bars */}
       <div style={{ display: 'flex', alignItems: 'flex-end', gap: 6, marginTop: 10, height: 22 }}>
         {(pot.history || []).slice().reverse().map((h, i) => {
-          const max = Math.max(...(pot.history || []).map(x => x[1]), 1);
-          const h2 = Math.max(4, (h[1] / max) * 22);
+          const max = Math.max(...(pot.history || []).map(x => x.v ?? x[1] ?? 0), 1);
+          const val = h.v ?? h[1] ?? 0;
+          const h2 = Math.max(4, (val / max) * 22);
           return (
             <div key={i} style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
               <div style={{ width: '100%', height: h2, background: color, opacity: 0.4, borderRadius: 3 }}/>
-              <span style={{ fontSize: 8, color: 'var(--ink-faint)' }}>{h[0]}</span>
+              <span style={{ fontSize: 8, color: 'var(--ink-faint)' }}>{h.m ?? h[0]}</span>
             </div>
           );
         })}
