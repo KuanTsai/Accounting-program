@@ -4,6 +4,8 @@ const { useState: useStateAdd } = React;
 
 function AddScreen({ onClose, onSave, envelopes = [], preset = {} }) {
   const [amount, setAmount] = useStateAdd('0');
+  const [pendingOp, setPendingOp] = useStateAdd(null);  // '+' | '−' | null
+  const [firstVal, setFirstVal] = useStateAdd(null);
   const [cat, setCat] = useStateAdd(() => preset.cat || 'food');
   const [type, setType] = useStateAdd(() => preset.type || 'expense'); // expense | income
   const [note, setNote] = useStateAdd('');
@@ -18,11 +20,49 @@ function AddScreen({ onClose, onSave, envelopes = [], preset = {} }) {
 
   const push = (key) => {
     if (key === 'del') {
-      setAmount(a => a.length <= 1 ? '0' : a.slice(0, -1));
+      if (pendingOp && amount === '0') {
+        // cancel pending op, restore firstVal
+        setAmount(String(firstVal));
+        setPendingOp(null);
+        setFirstVal(null);
+      } else {
+        setAmount(a => a.length <= 1 ? '0' : a.slice(0, -1));
+      }
       return;
     }
     if (key === '.') {
       if (!amount.includes('.')) setAmount(a => a + '.');
+      return;
+    }
+    if (key === '+' || key === '−') {
+      const cur = parseFloat(amount) || 0;
+      if (pendingOp) {
+        // chain: evaluate current pending op first, then set new op
+        const b = cur;
+        const result = pendingOp === '+' ? firstVal + b : firstVal - b;
+        const rounded = Math.round(result * 100) / 100;
+        setFirstVal(rounded);
+        setAmount('0');
+      } else {
+        setFirstVal(cur);
+        setAmount('0');
+      }
+      setPendingOp(key);
+      return;
+    }
+    if (key === '=') {
+      if (pendingOp && firstVal !== null) {
+        const b = parseFloat(amount) || 0;
+        const result = pendingOp === '+' ? firstVal + b : firstVal - b;
+        const rounded = Math.round(result * 100) / 100;
+        setAmount(String(Math.max(0, rounded)));
+        setPendingOp(null);
+        setFirstVal(null);
+      }
+      return;
+    }
+    if (key === '00') {
+      setAmount(a => a === '0' ? '0' : a + '00');
       return;
     }
     setAmount(a => a === '0' ? key : a + key);
@@ -86,9 +126,14 @@ function AddScreen({ onClose, onSave, envelopes = [], preset = {} }) {
       </div>
 
       {/* amount display */}
-      <div style={{ padding: '20px 24px 8px', textAlign: 'center' }}>
+      <div style={{ padding: '12px 24px 8px', textAlign: 'center' }}>
+        {pendingOp && (
+          <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 2, fontVariantNumeric: 'tabular-nums' }}>
+            {Number(firstVal).toLocaleString()} <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{pendingOp}</span>
+          </div>
+        )}
         <div style={{
-          display: 'inline-flex', alignItems: 'baseline', gap: 6, marginTop: 8,
+          display: 'inline-flex', alignItems: 'baseline', gap: 6,
           padding: '0 24px 6px', borderBottom: '2.5px dashed var(--accent-soft)',
         }}>
           <span style={{ fontSize: 22, color: type === 'expense' ? 'var(--accent)' : '#3B8A5C', fontWeight: 600 }}>
@@ -97,7 +142,7 @@ function AddScreen({ onClose, onSave, envelopes = [], preset = {} }) {
           <span style={{
             fontSize: 56, color: 'var(--ink)', fontWeight: 700,
             fontVariantNumeric: 'tabular-nums',
-          }}>{Number(amount.replace(/[^0-9.]/g, '')).toLocaleString()}{amount.endsWith('.') ? '.' : ''}</span>
+          }}>{Number(amount).toLocaleString()}{amount.endsWith('.') ? '.' : ''}</span>
         </div>
       </div>
 
@@ -108,7 +153,7 @@ function AddScreen({ onClose, onSave, envelopes = [], preset = {} }) {
           <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>已選：{CATEGORIES.find(c => c.id === cat)?.label}</span>
         </div>
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 6 }}>
-          {CATEGORIES.slice(0, 8).map(c => (
+          {CATEGORIES.map(c => (
             <div key={c.id} onClick={() => setCat(c.id)} className="tap" style={{
               flexShrink: 0, textAlign: 'center',
               padding: 6, borderRadius: 16,
@@ -258,10 +303,11 @@ function AddScreen({ onClose, onSave, envelopes = [], preset = {} }) {
           ].map((k, i) => {
             const isOp = ['+', '−', '=', 'del'].includes(k);
             const isPrimary = k === '=';
+            const isActivePendingOp = k === pendingOp;
             return (
               <div key={i} onClick={() => push(k)} className="tap" style={{
-                background: isPrimary ? 'var(--accent)' : isOp ? 'var(--accent-faint)' : '#fff',
-                color: isPrimary ? '#fff' : isOp ? 'var(--accent)' : 'var(--ink)',
+                background: isPrimary ? 'var(--accent)' : isActivePendingOp ? 'var(--accent)' : isOp ? 'var(--accent-faint)' : '#fff',
+                color: isPrimary || isActivePendingOp ? '#fff' : isOp ? 'var(--accent)' : 'var(--ink)',
                 borderRadius: 18,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 fontSize: 22, fontWeight: 600,
