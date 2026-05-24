@@ -703,6 +703,10 @@ function App() {
   });
   const income = monthlyTxs.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0);
   const expense = Math.abs(monthlyTxs.filter(t => t.amt < 0).reduce((s, t) => s + t.amt, 0));
+  const catUsed = {};
+  monthlyTxs.filter(t => t.amt < 0).forEach(t => {
+    catUsed[t.cat] = (catUsed[t.cat] || 0) + Math.abs(t.amt);
+  });
   const todayTxs = transactions.filter(tx => {
     if (!tx.createdAt) return false;
     const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
@@ -723,7 +727,7 @@ function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} envelopes={envelopes} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
+      case 'home': return <HomeScreen data={liveData} envelopes={envelopes} catUsed={catUsed} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} showCloseBanner={!monthClosed}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions} envelopes={envelopes}/>;
       case 'diary': return <DiaryScreen transactions={transactions}/>;
       case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} palette={tweaks.palette} foxState={foxState} transactions={transactions} envelopes={envelopes} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;

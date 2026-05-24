@@ -3,11 +3,11 @@
 const { useState: useStateBudget, useEffect: useEffectBudget } = React;
 
 const DEFAULT_ENVELOPES = [
-  { id: 'daily',   label: '日常生活', emoji: '🧺', color: '#FF8FAB', bg: '#FFE5EC', total: 12000, vault: true,  cats: ['food', 'drink', 'home'] },
-  { id: 'fun',     label: '玩樂',     emoji: '🎮', color: '#FFD66B', bg: '#FFF4D1', total: 6000,  vault: true,  cats: ['fun', 'shop', 'beauty', 'travel'] },
-  { id: 'invest',  label: '投資自己', emoji: '📈', color: '#7DCBA8', bg: '#D8F0E2', total: 3000,  vault: true,  cats: ['study', 'health'] },
-  { id: 'fixed',   label: '固定支出', emoji: '🏠', color: '#A8D8F0', bg: '#E0F2FA', total: 8000,  vault: false, cats: ['transport'] },
-  { id: 'reserve', label: '備用金',   emoji: '🛡️', color: '#C9B8F0', bg: '#EFE9FF', total: 5000,  vault: true,  cats: ['gift'] },
+  { id: 'daily',   label: '日常生活', emoji: '🧺', color: '#FF8FAB', bg: '#FFE5EC', total: 12000, vault: true,  daily: true,  cats: ['food', 'drink', 'home'] },
+  { id: 'fun',     label: '玩樂',     emoji: '🎮', color: '#FFD66B', bg: '#FFF4D1', total: 6000,  vault: true,  daily: false, cats: ['fun', 'shop', 'beauty', 'travel'] },
+  { id: 'invest',  label: '投資自己', emoji: '📈', color: '#7DCBA8', bg: '#D8F0E2', total: 3000,  vault: true,  daily: false, cats: ['study', 'health'] },
+  { id: 'fixed',   label: '固定支出', emoji: '🏠', color: '#A8D8F0', bg: '#E0F2FA', total: 8000,  vault: false, daily: false, cats: ['transport'] },
+  { id: 'reserve', label: '備用金',   emoji: '🛡️', color: '#C9B8F0', bg: '#EFE9FF', total: 5000,  vault: true,  daily: false, cats: ['gift'] },
 ];
 window.DEFAULT_ENVELOPES = DEFAULT_ENVELOPES;
 
@@ -92,6 +92,7 @@ function BudgetScreen({ onClose, transactions = [] }) {
       bg: '#FFE9D6',
       total: 2000,
       vault: true,
+      daily: false,
       cats: [],
     }]);
   };
@@ -576,6 +577,29 @@ function EnvelopeCard({ env, onUpdate, onAddCat, onDelete }) {
           <span style={{ color: 'var(--ink-soft)' }}>
             {' · 預估月底入 $'}{Math.max(0, env.total - env.used).toLocaleString()}
           </span>
+        </div>
+        <span style={{ fontSize: 10, color: 'var(--ink-faint)' }}>切換</span>
+      </div>
+
+      {/* daily toggle */}
+      <div className="tap" onClick={() => onUpdate({ daily: !env.daily })} style={{
+        marginTop: 6, padding: '6px 10px', borderRadius: 12,
+        background: env.daily ? '#E0F2FA' : 'var(--bg)',
+        display: 'flex', alignItems: 'center', gap: 8,
+        border: `1px dashed ${env.daily ? '#A8D8F0' : '#E8DCD3'}`,
+        transition: 'all 0.15s',
+      }}>
+        <div style={{
+          width: 22, height: 22, borderRadius: 11,
+          background: env.daily ? '#A8D8F0' : '#D5CCC4',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontSize: 12, transition: 'all 0.15s',
+        }}>📅</div>
+        <div style={{ flex: 1, fontSize: 11, color: 'var(--ink)' }}>
+          <b style={{ color: env.daily ? '#4A90C4' : 'var(--ink-soft)' }}>
+            {env.daily ? '計入每日可花' : '不計入每日可花'}
+          </b>
+          <span style={{ color: 'var(--ink-soft)' }}> · 首頁「每天可花」會參考此信封</span>
         </div>
         <span style={{ fontSize: 10, color: 'var(--ink-faint)' }}>切換</span>
       </div>

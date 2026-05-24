@@ -30,7 +30,7 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // ─────────────────────────────────────────────────────────────
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
-function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onOpenPalette, onOpenSettings, showCloseBanner = true, envelopes = [] }) {
+function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onOpenPalette, onOpenSettings, showCloseBanner = true, envelopes = [], catUsed = {} }) {
   const isNearMonthEnd = (() => {
     const d = new Date();
     const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
@@ -42,15 +42,25 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
   const todayLabel = `${_now.getMonth() + 1}/${_now.getDate()}`;
 
   // envelope budget stats
-  const budgetTotal = envelopes.reduce((s, e) => s + (e.total || 0), 0);
-  const budgetRemaining = Math.max(0, budgetTotal - expense);
-  const budgetPct = budgetTotal > 0 ? Math.min((expense / budgetTotal) * 100, 100) : 0;
-  const budgetOver = budgetTotal > 0 && expense > budgetTotal;
+  const envsWithUsed = envelopes.map(env => ({
+    ...env,
+    used: (env.cats || []).reduce((s, catId) => s + (catUsed[catId] || 0), 0),
+  }));
+  const budgetTotal = envsWithUsed.reduce((s, e) => s + (e.total || 0), 0);
+  const budgetUsed = envsWithUsed.reduce((s, e) => s + e.used, 0);
+  const budgetRemaining = Math.max(0, budgetTotal - budgetUsed);
+  const budgetPct = budgetTotal > 0 ? Math.min((budgetUsed / budgetTotal) * 100, 100) : 0;
+  const budgetOver = budgetTotal > 0 && budgetUsed > budgetTotal;
   const daysLeft = (() => {
     const last = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate();
     return Math.max(1, last - _now.getDate());
   })();
-  const dailyLeft = budgetRemaining > 0 ? Math.round(budgetRemaining / daysLeft) : 0;
+  // 每日可花：只算有 daily: true 的信封
+  const dailyEnvs = envsWithUsed.filter(e => e.daily);
+  const dailyBudget = dailyEnvs.reduce((s, e) => s + (e.total || 0), 0);
+  const dailyUsed = dailyEnvs.reduce((s, e) => s + e.used, 0);
+  const dailyRemaining = Math.max(0, dailyBudget - dailyUsed);
+  const dailyLeft = daysLeft > 0 && dailyRemaining > 0 ? Math.round(dailyRemaining / daysLeft) : 0;
   const useEnvelopeMode = budgetTotal > 0;
 
   return (
@@ -170,8 +180,8 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
               </div>
               <div style={{ fontSize: 10, color: budgetOver ? '#D86A8A' : 'var(--ink-soft)', marginTop: 6, textAlign: 'right', fontWeight: 500 }}>
                 {budgetOver
-                  ? `超支 $${(expense - budgetTotal).toLocaleString()} ！`
-                  : `已花 $${expense.toLocaleString()} ／ $${budgetTotal.toLocaleString()}`
+                  ? `超支 $${(budgetUsed - budgetTotal).toLocaleString()} ！`
+                  : `已花 $${budgetUsed.toLocaleString()} ／ $${budgetTotal.toLocaleString()}`
                 }
               </div>
               {/* daily budget */}
@@ -183,9 +193,9 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
                   </div>
                 </div>
                 <div style={{ flex: 1, background: 'var(--accent-faint)', borderRadius: 18, padding: '10px 14px' }}>
-                  <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, letterSpacing: '0.05em' }}>剩 {daysLeft} 天</div>
+                  <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, letterSpacing: '0.05em' }}>剩 {daysLeft} 天 · 已花</div>
                   <div style={{ fontSize: 18, color: '#D86A8A', fontWeight: 700, marginTop: 2 }}>
-                    ${expense.toLocaleString()}
+                    ${budgetUsed.toLocaleString()}
                   </div>
                 </div>
               </div>
