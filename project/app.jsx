@@ -185,7 +185,7 @@ function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   );
 }
 
-const APP_VERSION = 'v0.1.2';
+const APP_VERSION = 'v0.1.3';
 
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
