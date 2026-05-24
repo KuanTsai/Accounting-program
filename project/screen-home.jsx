@@ -61,6 +61,12 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
   const dailyUsed = dailyEnvs.reduce((s, e) => s + e.used, 0);
   const dailyRemaining = Math.max(0, dailyBudget - dailyUsed);
   const dailyLeft = daysLeft > 0 && dailyRemaining > 0 ? Math.round(dailyRemaining / daysLeft) : 0;
+  // 今日剩餘：每天可花 − 今天在 daily 信封裡的花費
+  const dailyCatIds = new Set(dailyEnvs.flatMap(e => e.cats || []));
+  const todayDailySpent = (recent || []).filter(t => t.amt < 0 && dailyCatIds.has(t.cat))
+    .reduce((s, t) => s + Math.abs(t.amt), 0);
+  const todayRemaining = Math.max(0, dailyLeft - todayDailySpent);
+  const todayOver = dailyBudget > 0 && todayDailySpent > dailyLeft;
   const useEnvelopeMode = budgetTotal > 0;
 
   return (
@@ -192,10 +198,10 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
                     ${budgetOver ? 0 : dailyLeft.toLocaleString()}
                   </div>
                 </div>
-                <div style={{ flex: 1, background: 'var(--accent-faint)', borderRadius: 18, padding: '10px 14px' }}>
-                  <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, letterSpacing: '0.05em' }}>剩 {daysLeft} 天 · 已花</div>
-                  <div style={{ fontSize: 18, color: '#D86A8A', fontWeight: 700, marginTop: 2 }}>
-                    ${budgetUsed.toLocaleString()}
+                <div style={{ flex: 1, background: todayOver ? '#FFE0E0' : 'var(--accent-faint)', borderRadius: 18, padding: '10px 14px' }}>
+                  <div style={{ fontSize: 10, color: 'var(--accent)', fontWeight: 600, letterSpacing: '0.05em' }}>今日剩餘</div>
+                  <div style={{ fontSize: 18, color: todayOver ? '#D86A8A' : '#D86A8A', fontWeight: 700, marginTop: 2 }}>
+                    {todayOver ? '已超今日' : `$${todayRemaining.toLocaleString()}`}
                   </div>
                 </div>
               </div>
