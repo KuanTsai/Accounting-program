@@ -185,7 +185,7 @@ function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   );
 }
 
-const APP_VERSION = 'v0.2.3';
+const APP_VERSION = 'v0.2.4';
 
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -792,7 +792,7 @@ function App() {
         <AddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={handleSaved} envelopes={envelopes} preset={addPreset}/>
         {budgetOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
-            <BudgetScreen onClose={() => setBudgetOpen(false)} onAdvisor={() => setAdvisorOpen(true)} transactions={transactions}/>
+            <BudgetScreen onClose={() => setBudgetOpen(false)} onAdvisor={() => setAdvisorOpen(true)} foxName={foxState.name || '小桃'} transactions={transactions}/>
           </div>
         )}
         {advisorOpen && (

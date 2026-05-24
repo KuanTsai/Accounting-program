@@ -11,7 +11,7 @@ const DEFAULT_ENVELOPES = [
 ];
 window.DEFAULT_ENVELOPES = DEFAULT_ENVELOPES;
 
-function BudgetScreen({ onClose, onAdvisor, transactions = [] }) {
+function BudgetScreen({ onClose, onAdvisor, foxName = '小桃', transactions = [] }) {
   const [total, setTotal] = useStateBudget(20000);
   const [totalRaw, setTotalRaw] = useStateBudget('');
   const [totalEditing, setTotalEditing] = useStateBudget(false);
@@ -121,7 +121,7 @@ function BudgetScreen({ onClose, onAdvisor, transactions = [] }) {
               padding: '6px 12px', borderRadius: 999,
               background: 'var(--accent-faint)', color: 'var(--accent)',
               fontSize: 12, fontWeight: 700,
-            }}>🦊 小桃規劃</div>
+            }}>🦊 {foxName}規劃</div>
           )}
           <div className="tap" style={{
             padding: '6px 14px', borderRadius: 999, background: 'var(--accent)',
