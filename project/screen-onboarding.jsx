@@ -28,28 +28,43 @@ function OnboardingScreen({ onFinish }) {
   const [budget, setBudget] = useStateOnb(20000);
   const defaultEnvIds = (window.DEFAULT_ENVELOPES || []).map(e => e.id);
   const [pickedEnvs, setPickedEnvs] = useStateOnb(defaultEnvIds);
+  const [advisorOpen, setAdvisorOpen] = useStateOnb(false);
+  const [advisorEnvelopes, setAdvisorEnvelopes] = useStateOnb(null);
 
   const finalName = name.trim() || '小桃';
+  const LAST = 7;
 
   const finish = () => {
     onFinish({
       name: finalName, fur, accessory, level: 1, exp: 0, days: 1,
       satiety: 80, energy: 80, moodScore: 90, mood: 'happy',
-      budget, pickedEnvs,
+      budget, pickedEnvs, advisorEnvelopes,
     });
   };
 
   const steps = [
-    { title: '歡迎', component: WelcomeStep },
-    { title: '取名字', component: NameStep },
-    { title: '選毛色', component: FurStep },
-    { title: '挑配件', component: AccessoryStep },
-    { title: '設預算', component: BudgetStep },
-    { title: '選信封', component: EnvelopeStep },
-    { title: '完成', component: DoneStep },
+    '歡迎', '取名字', '選毛色', '挑配件', '預算規劃', '設預算', '選信封', '完成',
   ];
-  const Step = steps[step].component;
-  const isLast = step === steps.length - 1;
+  const isChoiceStep = step === 4;
+  const isLast = step === LAST;
+
+  const sharedProps = { name, setName, fur, setFur, accessory, setAccessory, budget, setBudget, pickedEnvs, setPickedEnvs, finalName, advisorEnvelopes };
+
+  const renderStep = () => {
+    switch (step) {
+      case 0: return <WelcomeStep/>;
+      case 1: return <NameStep {...sharedProps}/>;
+      case 2: return <FurStep {...sharedProps}/>;
+      case 3: return <AccessoryStep {...sharedProps}/>;
+      case 4: return <BudgetChoiceStep fur={fur} accessory={accessory}
+        onManual={() => setStep(5)}
+        onAdvisor={() => setAdvisorOpen(true)}/>;
+      case 5: return <BudgetStep {...sharedProps}/>;
+      case 6: return <EnvelopeStep {...sharedProps}/>;
+      case 7: return <DoneStep {...sharedProps}/>;
+      default: return null;
+    }
+  };
 
   return (
     <div style={{
@@ -59,10 +74,7 @@ function OnboardingScreen({ onFinish }) {
       animation: 'pop-in 0.3s ease-out',
     }}>
       {/* progress dots + skip */}
-      <div style={{
-        padding: '54px 24px 14px',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-      }}>
+      <div style={{ padding: '54px 24px 14px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', gap: 4 }}>
           {steps.map((_, i) => (
             <div key={i} style={{
@@ -72,39 +84,45 @@ function OnboardingScreen({ onFinish }) {
             }}/>
           ))}
         </div>
-        {!isLast && step > 0 && (
-          <span className="tap" onClick={finish} style={{
-            fontSize: 12, color: 'var(--ink-soft)', padding: '4px 8px',
-          }}>略過 →</span>
+        {!isLast && step > 0 && !isChoiceStep && (
+          <span className="tap" onClick={finish} style={{ fontSize: 12, color: 'var(--ink-soft)', padding: '4px 8px' }}>略過 →</span>
         )}
       </div>
 
       {/* step content */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '0 24px' }}>
-        <Step {...{
-          name, setName, fur, setFur, accessory, setAccessory,
-          budget, setBudget, pickedEnvs, setPickedEnvs, finalName,
-        }}/>
+        {renderStep()}
       </div>
 
-      {/* footer button */}
-      <div style={{ padding: '14px 24px 30px' }}>
-        <div className="tap"
-          onClick={() => {
-            if (isLast) finish();
-            else setStep(step + 1);
-          }}
-          style={{
-            background: isLast
-              ? 'linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%)'
-              : 'var(--accent)',
-            borderRadius: 18, padding: '15px 0', textAlign: 'center',
-            color: '#fff', fontSize: 16, fontWeight: 700,
-            boxShadow: '0 8px 20px rgba(255,143,171,0.35)',
-          }}>
-          {isLast ? '開始記錄吧 ✨' : step === 0 ? '開始 →' : '下一步 →'}
+      {/* footer button — hidden for choice step */}
+      {!isChoiceStep && (
+        <div style={{ padding: '14px 24px 30px' }}>
+          <div className="tap"
+            onClick={() => { if (isLast) finish(); else setStep(step + 1); }}
+            style={{
+              background: isLast
+                ? 'linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%)'
+                : 'var(--accent)',
+              borderRadius: 18, padding: '15px 0', textAlign: 'center',
+              color: '#fff', fontSize: 16, fontWeight: 700,
+              boxShadow: '0 8px 20px rgba(255,143,171,0.35)',
+            }}>
+            {isLast ? '開始記錄吧 ✨' : step === 0 ? '開始 →' : '下一步 →'}
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Advisor overlay inside onboarding */}
+      {advisorOpen && (
+        <FinancialAdvisorScreen
+          onClose={() => setAdvisorOpen(false)}
+          onApply={(envs) => {
+            setAdvisorEnvelopes(envs);
+            setAdvisorOpen(false);
+            setStep(LAST);
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -276,6 +294,64 @@ function AccessoryStep({ fur, accessory, setAccessory, finalName }) {
   );
 }
 
+function BudgetChoiceStep({ fur, accessory, onManual, onAdvisor }) {
+  return (
+    <div style={{ textAlign: 'center', paddingTop: 16 }}>
+      <Fox mood="happy" size={100} fur={fur} accessory={accessory}/>
+      <div className="hand" style={{ fontSize: 26, color: 'var(--ink)', marginTop: 14 }}>
+        怎麼設定預算？
+      </div>
+      <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 6, marginBottom: 28 }}>
+        選一個你喜歡的方式 ✿
+      </div>
+
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+        <div className="tap" onClick={onAdvisor} style={{
+          background: 'linear-gradient(135deg, var(--accent-faint) 0%, #FFF1E8 100%)',
+          border: '2px solid var(--accent-soft)',
+          borderRadius: 22, padding: '20px 18px',
+          display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+        }}>
+          <div style={{
+            width: 54, height: 54, borderRadius: 16, background: 'var(--accent)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+          }}>
+            <Fox mood="excited" size={44} fur={fur}/>
+          </div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>讓小桃幫我規劃 🦊</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4, lineHeight: 1.55 }}>
+              回答幾個問題，小桃幫你算出<br/>最適合的預算分配方式
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+
+        <div className="tap" onClick={onManual} style={{
+          background: 'rgba(255,255,255,0.75)',
+          border: '2px solid rgba(74,58,53,0.08)',
+          borderRadius: 22, padding: '18px 18px',
+          display: 'flex', alignItems: 'center', gap: 14, textAlign: 'left',
+          boxShadow: 'var(--shadow-sm)',
+        }}>
+          <div style={{
+            width: 54, height: 54, borderRadius: 16, background: 'var(--bg)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: 26, flexShrink: 0,
+          }}>✏️</div>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>自己設定</div>
+            <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4 }}>
+              直接輸入月預算金額和信封分配
+            </div>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--ink-soft)" strokeWidth="2.5" strokeLinecap="round"><path d="M9 18l6-6-6-6"/></svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function BudgetStep({ budget, setBudget, fur, accessory }) {
   const { useState: useStateBS } = React;
   const presets = [10000, 20000, 30000, 50000];
@@ -433,9 +509,12 @@ function EnvelopeStep({ budget, pickedEnvs, setPickedEnvs }) {
   );
 }
 
-function DoneStep({ fur, accessory, finalName, budget, pickedEnvs }) {
+function DoneStep({ fur, accessory, finalName, budget, pickedEnvs, advisorEnvelopes }) {
   const allEnvs = window.DEFAULT_ENVELOPES || [];
-  const selected = allEnvs.filter(e => pickedEnvs.includes(e.id));
+  const selected = advisorEnvelopes || allEnvs.filter(e => pickedEnvs.includes(e.id));
+  const displayBudget = advisorEnvelopes
+    ? advisorEnvelopes.reduce((s, e) => s + e.total, 0)
+    : budget;
 
   return (
     <div style={{ textAlign: 'center', paddingTop: 20, position: 'relative' }}>
@@ -466,7 +545,7 @@ function DoneStep({ fur, accessory, finalName, budget, pickedEnvs }) {
         boxShadow: 'var(--shadow-sm)', textAlign: 'left',
       }}>
         <SummaryRow icon="🦊" label="狐狸" value={finalName}/>
-        <SummaryRow icon="💰" label="月預算" value={`NT$ ${budget.toLocaleString()}`}/>
+        <SummaryRow icon="💰" label="月預算" value={`NT$ ${displayBudget.toLocaleString()}`}/>
         <div style={{ padding: '8px 0', borderTop: '1px dashed #F5E5DC' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
             <div style={{ fontSize: 18, width: 28, textAlign: 'center' }}>✉️</div>
