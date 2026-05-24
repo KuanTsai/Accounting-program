@@ -185,6 +185,8 @@ function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   );
 }
 
+const APP_VERSION = 'v0.1.0';
+
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
   "palette": "sakura"
@@ -401,6 +403,10 @@ function SettingsSheet({ user, onLogout, onClose }) {
           background: 'var(--accent-faint)', textAlign: 'center',
           fontSize: 15, color: 'var(--accent)', fontWeight: 700,
         }}>關閉</div>
+
+        <div style={{ marginTop: 16, textAlign: 'center', fontSize: 11, color: 'var(--ink-faint)' }}>
+          小桃の記帳日記 {APP_VERSION}
+        </div>
       </div>
     </div>
   );
@@ -780,6 +786,7 @@ function App() {
               onWithdraw={(pot) => setWithdrawPot(pot)}
               onDeposit={(pot) => setDepositPot(pot)}
               onEditGoal={(pot) => setEditingGoal(pot)}
+              onOpenClose={() => { setVaultOpen(false); setCloseOpen(true); }}
               goalPots={goalPots}
               autoPots={autoPots}
               foxFur={foxState.fur}

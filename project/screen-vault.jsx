@@ -2,7 +2,7 @@
 
 const { useState: useStateVault } = React;
 
-function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, onEditGoal, goalPots = [], autoPots = [], foxFur = 'orange', foxAccessory = 'none' }) {
+function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, onEditGoal, onOpenClose, goalPots = [], autoPots = [], foxFur = 'orange', foxAccessory = 'none' }) {
   const [tab, setTab] = useStateVault('all'); // all | auto | goal
 
   const totalAuto = autoPots.reduce((s, p) => s + (p.total || 0), 0);
@@ -103,8 +103,8 @@ function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, onEditGoal, go
           </div>
         </div>
 
-        {/* tabs */}
-        <div style={{ padding: '20px 20px 0' }}>
+        {/* tabs + test button */}
+        <div style={{ padding: '20px 20px 0', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
           <div style={{
             display: 'inline-flex', background: '#fff', borderRadius: 999,
             padding: 4, boxShadow: 'var(--shadow-sm)',
@@ -123,6 +123,14 @@ function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, onEditGoal, go
               }}>{t.label} <span style={{ opacity: 0.7, fontSize: 11 }}>({t.count})</span></div>
             ))}
           </div>
+          {onOpenClose && (
+            <div className="tap" onClick={onOpenClose} style={{
+              padding: '6px 14px', borderRadius: 999,
+              background: '#FFF4D1', color: '#A0700A',
+              fontSize: 12, fontWeight: 700,
+              border: '1.5px dashed #FFD66B',
+            }}>🧪 立即結算</div>
+          )}
         </div>
 
         {/* auto pots */}
