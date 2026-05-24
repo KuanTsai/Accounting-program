@@ -95,6 +95,20 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
           saved: firebase.firestore.FieldValue.increment(it.leftover),
         });
       }
+      // Rollover — add leftover back to each envelope's budget total
+      const rolloverItems = items.filter(it => (picks[it.envId] || 'rollover') === 'rollover' && it.leftover > 0);
+      if (rolloverItems.length > 0) {
+        const budgetRef = window.db.collection('users').doc(uid).collection('settings').doc('budget');
+        const budgetDoc = await budgetRef.get();
+        if (budgetDoc.exists) {
+          const envs = (budgetDoc.data().envelopes || []).map(env => {
+            const match = rolloverItems.find(it => it.envId === env.id);
+            return match ? { ...env, total: (env.total || 0) + match.leftover } : env;
+          });
+          const newTotal = envs.reduce((s, e) => s + (e.total || 0), 0);
+          await budgetRef.update({ envelopes: envs, total: newTotal });
+        }
+      }
       // Record close
       const closeKey = `${closeYear}-${String(closeMonth + 1).padStart(2, '0')}`;
       await window.db.collection('users').doc(uid).collection('closes').doc(closeKey).set({
