@@ -2,7 +2,7 @@
 
 const { useState: useStateVault } = React;
 
-function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, goalPots = [], autoPots = [], foxFur = 'orange', foxAccessory = 'none' }) {
+function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, onEditGoal, goalPots = [], autoPots = [], foxFur = 'orange', foxAccessory = 'none' }) {
   const [tab, setTab] = useStateVault('all'); // all | auto | goal
 
   const totalAuto = autoPots.reduce((s, p) => s + (p.total || 0), 0);
@@ -150,7 +150,7 @@ function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, goalPots = [],
               </span>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {goalPots.map(p => <GoalPotCard key={p.id} pot={p} onDeposit={() => onDeposit && onDeposit(p)}/>)}
+              {goalPots.map(p => <GoalPotCard key={p.id} pot={p} onDeposit={() => onDeposit && onDeposit(p)} onEdit={() => onEditGoal && onEditGoal(p)}/>)}
               <div className="tap dashed-border" onClick={onAddGoal} style={{
                 padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 12,
                 background: 'rgba(255,255,255,0.5)',
@@ -241,7 +241,7 @@ function AutoPotCard({ pot, onWithdraw }) {
   );
 }
 
-function GoalPotCard({ pot, onDeposit }) {
+function GoalPotCard({ pot, onDeposit, onEdit }) {
   const pct = (pot.saved / pot.target) * 100;
   return (
     <div style={{
@@ -308,7 +308,7 @@ function GoalPotCard({ pot, onDeposit }) {
           background: pot.color, color: '#fff',
           fontSize: 12, fontWeight: 600, textAlign: 'center',
         }}>＋ 撥款</div>
-        <div className="tap" style={{
+        <div className="tap" onClick={onEdit} style={{
           flex: 1, padding: '8px 0', borderRadius: 12,
           background: pot.bg, color: pot.color,
           fontSize: 12, fontWeight: 600, textAlign: 'center',

@@ -464,6 +464,7 @@ function App() {
   const [vaultOpen, setVaultOpen] = useStateApp(false);
   const [closeOpen, setCloseOpen] = useStateApp(false);
   const [newGoalOpen, setNewGoalOpen] = useStateApp(false);
+  const [editingGoal, setEditingGoal] = useStateApp(null);
   const [withdrawPot, setWithdrawPot] = useStateApp(null);
   const [depositPot, setDepositPot] = useStateApp(null);
   const [categoriesOpen, setCategoriesOpen] = useStateApp(false);
@@ -679,6 +680,19 @@ function App() {
     setNewGoalOpen(false);
   };
 
+  const handleUpdateGoal = async (data) => {
+    if (!user || !data.id) return;
+    await window.db.collection('users').doc(user.uid).collection('goals').doc(data.id).update({
+      label: data.name,
+      target: data.amount,
+      color: data.color,
+      bg: data.bg,
+      icon: data.icon,
+      deadline: data.deadline || null,
+    });
+    setEditingGoal(null);
+  };
+
   const handleDepositConfirm = async ({ pot, amount }) => {
     if (!user) return;
     await window.db.collection('users').doc(user.uid).collection('goals').doc(pot.id).update({
@@ -765,6 +779,7 @@ function App() {
               onAddGoal={() => setNewGoalOpen(true)}
               onWithdraw={(pot) => setWithdrawPot(pot)}
               onDeposit={(pot) => setDepositPot(pot)}
+              onEditGoal={(pot) => setEditingGoal(pot)}
               goalPots={goalPots}
               autoPots={autoPots}
               foxFur={foxState.fur}
@@ -776,6 +791,13 @@ function App() {
           <NewGoalScreen
             onClose={() => setNewGoalOpen(false)}
             onSave={handleSaveGoal}
+          />
+        )}
+        {editingGoal && (
+          <NewGoalScreen
+            existing={editingGoal}
+            onClose={() => setEditingGoal(null)}
+            onSave={handleUpdateGoal}
           />
         )}
         {withdrawPot && (
