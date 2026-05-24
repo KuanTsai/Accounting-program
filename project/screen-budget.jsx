@@ -13,6 +13,8 @@ window.DEFAULT_ENVELOPES = DEFAULT_ENVELOPES;
 
 function BudgetScreen({ onClose, transactions = [] }) {
   const [total, setTotal] = useStateBudget(20000);
+  const [totalRaw, setTotalRaw] = useStateBudget('');
+  const [totalEditing, setTotalEditing] = useStateBudget(false);
   const [warnAt, setWarnAt] = useStateBudget(80);
   const [remindOn, setRemindOn] = useStateBudget(true);
   const [envelopes, setEnvelopes] = useStateBudget(null); // null = loading
@@ -127,36 +129,52 @@ function BudgetScreen({ onClose, transactions = [] }) {
           }}>
             <Tape color="var(--secondary-soft)" rotate={-5} style={{ top: -10, left: 24 }}/>
 
-            <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ fontSize: 12, color: 'var(--ink-soft)', fontFamily: 'Caveat', fontWeight: 600 }}>
-                  monthly budget ✿
-                </div>
-                <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 2 }}>本月總預算</div>
-                <div style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 3, lineHeight: 1.4 }}>
-                  信封預算：每個信封都有自己的額度，<br/>月底沒花完的錢自動存進金庫 ✿
-                </div>
-                <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 6 }}>
-                  <span style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 600 }}>NT$</span>
-                  <span style={{ fontSize: 34, color: 'var(--ink)', fontWeight: 700, letterSpacing: -0.3 }}>
+            <div>
+              <div style={{ fontSize: 12, color: 'var(--ink-soft)', fontFamily: 'Caveat', fontWeight: 600 }}>
+                monthly budget ✿
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginTop: 2 }}>本月總預算</div>
+              <div style={{ fontSize: 11, color: 'var(--ink-faint)', marginTop: 3, lineHeight: 1.4 }}>
+                信封預算：每個信封都有自己的額度，<br/>月底沒花完的錢自動存進金庫 ✿
+              </div>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginTop: 10 }}>
+                <span style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 600 }}>NT$</span>
+                {totalEditing ? (
+                  <input
+                    autoFocus
+                    type="number"
+                    value={totalRaw}
+                    onChange={e => setTotalRaw(e.target.value)}
+                    onBlur={() => {
+                      const n = parseInt(totalRaw, 10);
+                      if (!isNaN(n) && n > 0) setTotal(n);
+                      setTotalEditing(false);
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') e.target.blur();
+                      if (e.key === 'Escape') { setTotalEditing(false); }
+                    }}
+                    style={{
+                      fontSize: 34, fontWeight: 700, letterSpacing: -0.3,
+                      border: 'none', outline: 'none', background: 'transparent',
+                      color: 'var(--ink)', width: 160,
+                      borderBottom: '2px dashed var(--accent)',
+                    }}
+                  />
+                ) : (
+                  <span
+                    className="tap"
+                    onClick={() => { setTotalRaw(String(total)); setTotalEditing(true); }}
+                    style={{
+                      fontSize: 34, color: 'var(--ink)', fontWeight: 700, letterSpacing: -0.3,
+                      borderBottom: '2px dashed var(--accent-soft)',
+                    }}
+                  >
                     {total.toLocaleString()}
                   </span>
-                </div>
+                )}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                <div className="tap" onClick={() => setTotal(t => t + 1000)} style={{
-                  width: 34, height: 34, borderRadius: 10, background: '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 18, fontWeight: 700, color: 'var(--accent)',
-                  boxShadow: 'var(--shadow-sm)',
-                }}>＋</div>
-                <div className="tap" onClick={() => setTotal(t => Math.max(0, t - 1000))} style={{
-                  width: 34, height: 34, borderRadius: 10, background: '#fff',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  fontSize: 18, fontWeight: 700, color: 'var(--accent)',
-                  boxShadow: 'var(--shadow-sm)',
-                }}>−</div>
-              </div>
+              <div style={{ fontSize: 10, color: 'var(--ink-faint)', marginTop: 4 }}>點數字直接輸入 ✿</div>
             </div>
 
             {/* progress bar with fox */}

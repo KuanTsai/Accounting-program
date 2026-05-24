@@ -277,7 +277,11 @@ function AccessoryStep({ fur, accessory, setAccessory, finalName }) {
 }
 
 function BudgetStep({ budget, setBudget, fur, accessory }) {
+  const { useState: useStateBS } = React;
   const presets = [10000, 20000, 30000, 50000];
+  const [raw, setRaw] = useStateBS('');
+  const [editing, setEditing] = useStateBS(false);
+
   return (
     <div style={{ textAlign: 'center', paddingTop: 10 }}>
       <Fox mood="happy" size={110} fur={fur} accessory={accessory}/>
@@ -290,28 +294,56 @@ function BudgetStep({ budget, setBudget, fur, accessory }) {
 
       <div style={{
         marginTop: 22, background: '#fff', borderRadius: 22,
-        padding: '20px 18px',
+        padding: '24px 18px',
         boxShadow: '0 4px 14px rgba(0,0,0,0.06)',
       }}>
+        <div style={{ fontSize: 11, color: 'var(--ink-faint)', marginBottom: 8 }}>點數字直接輸入</div>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'center', gap: 6 }}>
-          <span style={{ fontSize: 14, color: 'var(--ink-soft)' }}>NT$</span>
-          <span style={{
-            fontSize: 38, color: 'var(--ink)', fontWeight: 700,
-            fontVariantNumeric: 'tabular-nums', letterSpacing: -0.5,
-          }}>{budget.toLocaleString()}</span>
-          <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>/ 月</span>
+          <span style={{ fontSize: 16, color: 'var(--ink-soft)', fontWeight: 600 }}>NT$</span>
+          {editing ? (
+            <input
+              autoFocus
+              type="number"
+              value={raw}
+              onChange={e => setRaw(e.target.value)}
+              onBlur={() => {
+                const n = parseInt(raw, 10);
+                if (!isNaN(n) && n > 0) setBudget(n);
+                setEditing(false);
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter') e.target.blur();
+                if (e.key === 'Escape') setEditing(false);
+              }}
+              style={{
+                fontSize: 48, fontWeight: 700, letterSpacing: -0.5,
+                border: 'none', outline: 'none', background: 'transparent',
+                color: 'var(--accent)', width: 200, textAlign: 'center',
+                borderBottom: '2.5px dashed var(--accent)',
+              }}
+            />
+          ) : (
+            <span
+              className="tap"
+              onClick={() => { setRaw(String(budget)); setEditing(true); }}
+              style={{
+                fontSize: 48, color: 'var(--ink)', fontWeight: 700,
+                fontVariantNumeric: 'tabular-nums', letterSpacing: -0.5,
+                borderBottom: '2.5px dashed var(--accent-soft)',
+              }}
+            >
+              {budget.toLocaleString()}
+            </span>
+          )}
+          <span style={{ fontSize: 15, color: 'var(--ink-soft)' }}>/ 月</span>
         </div>
-        <input
-          type="range" min={5000} max={80000} step={1000}
-          value={budget} onChange={e => setBudget(Number(e.target.value))}
-          style={{ width: '100%', marginTop: 14, accentColor: 'var(--accent)' }}
-        />
-        <div style={{ display: 'flex', gap: 6, marginTop: 10 }}>
+
+        <div style={{ display: 'flex', gap: 6, marginTop: 18 }}>
           {presets.map(p => (
             <span key={p} className="tap" onClick={() => setBudget(p)} style={{
               flex: 1, textAlign: 'center',
-              fontSize: 12, fontWeight: 600,
-              padding: '8px 0', borderRadius: 999,
+              fontSize: 13, fontWeight: 600,
+              padding: '9px 0', borderRadius: 999,
               background: budget === p ? 'var(--accent)' : 'var(--bg)',
               color: budget === p ? '#fff' : 'var(--ink-soft)',
               transition: 'all 0.15s',

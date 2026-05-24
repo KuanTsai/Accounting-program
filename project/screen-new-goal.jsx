@@ -24,11 +24,13 @@ const GOAL_COLORS = [
   { color: '#7DCBC4', bg: '#D8F0EE' },
 ];
 
-const AMOUNT_PRESETS = [10000, 30000, 50000, 100000, 300000];
+const AMOUNT_PRESETS = [30000, 50000, 100000, 500000, 1000000];
 
 function NewGoalScreen({ onClose, onSave }) {
   const [name, setName] = useStateGoal('');
   const [amount, setAmount] = useStateGoal(30000);
+  const [amtRaw, setAmtRaw] = useStateGoal('');
+  const [amtEditing, setAmtEditing] = useStateGoal(false);
   const [icon, setIcon] = useStateGoal('travel');
   const [colorIdx, setColorIdx] = useStateGoal(0);
   const [deadline, setDeadline] = useStateGoal(null);
@@ -141,22 +143,49 @@ function NewGoalScreen({ onClose, onSave }) {
 
         {/* amount */}
         <div style={{ padding: '18px 20px 0' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
-            <div style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 600 }}>目標金額</div>
-            <span style={{ fontSize: 18, color: 'var(--accent)', fontWeight: 700, fontVariantNumeric: 'tabular-nums' }}>
-              NT$ {amount.toLocaleString()}
-            </span>
-          </div>
+          <div style={{ fontSize: 12, color: 'var(--ink-soft)', fontWeight: 600, marginBottom: 8 }}>目標金額</div>
           <div style={{
-            background: 'var(--card)', borderRadius: 14, padding: '14px 14px 12px',
+            background: 'var(--card)', borderRadius: 14, padding: '16px 14px 12px',
             boxShadow: 'var(--shadow-sm)',
           }}>
-            <input
-              type="range" min={1000} max={500000} step={1000}
-              value={amount} onChange={e => setAmount(Number(e.target.value))}
-              style={{ width: '100%', accentColor: 'var(--accent)' }}
-            />
-            <div style={{ display: 'flex', gap: 6, marginTop: 8 }}>
+            <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, marginBottom: 12 }}>
+              <span style={{ fontSize: 14, color: 'var(--ink-soft)', fontWeight: 600 }}>NT$</span>
+              {amtEditing ? (
+                <input
+                  autoFocus
+                  type="number"
+                  value={amtRaw}
+                  onChange={e => setAmtRaw(e.target.value)}
+                  onBlur={() => {
+                    const n = parseInt(amtRaw, 10);
+                    if (!isNaN(n) && n > 0) setAmount(n);
+                    setAmtEditing(false);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') e.target.blur();
+                    if (e.key === 'Escape') setAmtEditing(false);
+                  }}
+                  style={{
+                    fontSize: 32, fontWeight: 700, letterSpacing: -0.3,
+                    border: 'none', outline: 'none', background: 'transparent',
+                    color: 'var(--accent)', width: 180,
+                    borderBottom: '2px dashed var(--accent)',
+                  }}
+                />
+              ) : (
+                <span
+                  className="tap"
+                  onClick={() => { setAmtRaw(String(amount)); setAmtEditing(true); }}
+                  style={{
+                    fontSize: 32, color: 'var(--ink)', fontWeight: 700, letterSpacing: -0.3,
+                    borderBottom: '2px dashed var(--accent-soft)',
+                  }}
+                >
+                  {amount.toLocaleString()}
+                </span>
+              )}
+            </div>
+            <div style={{ display: 'flex', gap: 6 }}>
               {AMOUNT_PRESETS.map(p => (
                 <span key={p} className="tap" onClick={() => setAmount(p)} style={{
                   flex: 1, textAlign: 'center',
