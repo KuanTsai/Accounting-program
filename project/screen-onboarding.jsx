@@ -56,7 +56,7 @@ function OnboardingScreen({ onFinish }) {
       case 1: return <NameStep {...sharedProps}/>;
       case 2: return <FurStep {...sharedProps}/>;
       case 3: return <AccessoryStep {...sharedProps}/>;
-      case 4: return <BudgetChoiceStep fur={fur} accessory={accessory}
+      case 4: return <BudgetChoiceStep fur={fur} accessory={accessory} finalName={finalName}
         onManual={() => setStep(5)}
         onAdvisor={() => setAdvisorOpen(true)}/>;
       case 5: return <BudgetStep {...sharedProps}/>;
@@ -118,6 +118,7 @@ function OnboardingScreen({ onFinish }) {
           onClose={() => setAdvisorOpen(false)}
           foxFur={fur}
           foxAccessory={accessory}
+          foxName={finalName}
           onApply={(envs) => {
             setAdvisorEnvelopes(envs);
             setAdvisorOpen(false);
@@ -296,7 +297,7 @@ function AccessoryStep({ fur, accessory, setAccessory, finalName }) {
   );
 }
 
-function BudgetChoiceStep({ fur, accessory, onManual, onAdvisor }) {
+function BudgetChoiceStep({ fur, accessory, finalName, onManual, onAdvisor }) {
   return (
     <div style={{ textAlign: 'center', paddingTop: 16 }}>
       <Fox mood="happy" size={100} fur={fur} accessory={accessory}/>
@@ -321,7 +322,7 @@ function BudgetChoiceStep({ fur, accessory, onManual, onAdvisor }) {
             <Fox mood="excited" size={44} fur={fur}/>
           </div>
           <div style={{ flex: 1 }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>讓小桃幫我規劃 🦊</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--ink)' }}>讓{finalName}幫我規劃 🦊</div>
             <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginTop: 4, lineHeight: 1.55 }}>
               回答幾個問題，小桃幫你算出<br/>最適合的預算分配方式
             </div>

@@ -16,7 +16,7 @@ function FoxBubble({ children, fur, accessory }) {
   );
 }
 
-function FinancialAdvisorScreen({ onClose, onApply, foxFur = 'orange', foxAccessory = 'none' }) {
+function FinancialAdvisorScreen({ onClose, onApply, foxFur = 'orange', foxAccessory = 'none', foxName = '小桃' }) {
   const [step, setStep] = useStateAdv(0);
   const [income, setIncome] = useStateAdv('');
   const [fixedList, setFixedList] = useStateAdv([
@@ -31,6 +31,7 @@ function FinancialAdvisorScreen({ onClose, onApply, foxFur = 'orange', foxAccess
   const [situation, setSituation] = useStateAdv(null);
   const [goals, setGoals] = useStateAdv([]);
   const [suggested, setSuggested] = useStateAdv(null);
+  const [activeIds, setActiveIds] = useStateAdv(null);
 
   const incomeNum = parseInt(income) || 0;
   const fixedTotal = fixedList.reduce((s, i) => s + (parseInt(i.val) || 0), 0);
@@ -104,7 +105,30 @@ function FinancialAdvisorScreen({ onClose, onApply, foxFur = 'orange', foxAccess
     }
 
     setSuggested(envs);
+    setActiveIds(null);
     setStep(5);
+  };
+
+  const getActiveIds = () => activeIds || (suggested ? suggested.map(e => e.id) : []);
+
+  const toggleEnv = (id) => {
+    const ids = getActiveIds();
+    if (ids.length <= 1 && ids.includes(id)) return;
+    setActiveIds(ids.includes(id) ? ids.filter(i => i !== id) : [...ids, id]);
+  };
+
+  // Redistribute removed envelope budgets proportionally among active ones
+  const getDisplayEnvs = () => {
+    if (!suggested) return [];
+    const ids = getActiveIds();
+    const active = suggested.filter(e => ids.includes(e.id));
+    if (active.length === suggested.length) return suggested;
+    const activeSubtotal = active.reduce((s, e) => s + e.total, 0);
+    const totalBudget = suggested.reduce((s, e) => s + e.total, 0);
+    return active.map(env => ({
+      ...env,
+      total: activeSubtotal > 0 ? round500(env.total / activeSubtotal * totalBudget) : env.total,
+    }));
   };
 
   const foxTip = () => {
@@ -135,7 +159,7 @@ function FinancialAdvisorScreen({ onClose, onApply, foxFur = 'orange', foxAccess
               <Fox mood="happy" size={110} fur={foxFur} accessory={foxAccessory}/>
             </div>
             <div className="hand" style={{ fontSize: 26, color: 'var(--ink)', marginBottom: 10 }}>
-              讓小桃幫你規劃！
+              讓{foxName}幫你規劃！
             </div>
             <div style={{ fontSize: 14, color: 'var(--ink-soft)', lineHeight: 1.8, marginBottom: 24 }}>
               我會問你幾個關於收入和支出的問題，<br/>
@@ -261,6 +285,8 @@ function FinancialAdvisorScreen({ onClose, onApply, foxFur = 'orange', foxAccess
 
       case 5: {
         if (!suggested) return null;
+        const ids = getActiveIds();
+        const displayEnvs = getDisplayEnvs();
         return (
           <div style={{ padding: '8px 24px' }}>
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10, marginBottom: 18 }}>
@@ -283,28 +309,49 @@ function FinancialAdvisorScreen({ onClose, onApply, foxFur = 'orange', foxAccess
                 <div style={{ height: '100%', width: `${Math.min(100, incomeNum > 0 ? (fixedTotal / incomeNum) * 100 : 0)}%`, background: '#A8D8F0' }}/>
                 <div style={{ height: '100%', flex: 1, background: 'var(--accent)', opacity: 0.4 }}/>
               </div>
-              <div style={{ display: 'flex', gap: 16, marginTop: 5, fontSize: 10, color: 'var(--ink-faint)' }}>
-                <span>■ 固定支出</span>
-                <span style={{ color: 'var(--accent)' }}>■ 可支配</span>
-              </div>
             </div>
 
-            {/* envelope list */}
+            <div style={{ fontSize: 12, color: 'var(--ink-soft)', marginBottom: 10 }}>
+              點右側開關可以移除信封，金額會自動重新分配 ✿
+            </div>
+
+            {/* envelope list with toggles */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 16 }}>
               {suggested.map(env => {
-                const pct = disposable > 0 ? Math.round((env.total / disposable) * 100) : 0;
+                const isActive = ids.includes(env.id);
+                const display = displayEnvs.find(e => e.id === env.id);
+                const pct = display && disposable > 0 ? Math.round((display.total / disposable) * 100) : 0;
                 return (
-                  <div key={env.id} style={{ background: 'var(--card)', borderRadius: 16, padding: '13px 16px', boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: 12 }}>
+                  <div key={env.id} style={{
+                    background: 'var(--card)', borderRadius: 16, padding: '13px 16px',
+                    boxShadow: 'var(--shadow-sm)', display: 'flex', alignItems: 'center', gap: 12,
+                    opacity: isActive ? 1 : 0.4, transition: 'opacity 0.2s',
+                  }}>
                     <div style={{ width: 44, height: 44, borderRadius: 13, background: env.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, flexShrink: 0 }}>{env.emoji}</div>
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 700 }}>{env.label}</div>
                       <div style={{ height: 5, borderRadius: 3, background: '#F5EBE4', marginTop: 6 }}>
-                        <div style={{ height: '100%', width: `${pct}%`, background: env.color, borderRadius: 3 }}/>
+                        <div style={{ height: '100%', width: isActive ? `${pct}%` : '0%', background: env.color, borderRadius: 3, transition: 'width 0.3s' }}/>
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                      <div style={{ fontSize: 16, fontWeight: 700, color: env.color, fontVariantNumeric: 'tabular-nums' }}>NT${env.total.toLocaleString()}</div>
-                      <div style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{pct}%</div>
+                    <div style={{ textAlign: 'right', flexShrink: 0, marginRight: 8 }}>
+                      {isActive ? (
+                        <>
+                          <div style={{ fontSize: 16, fontWeight: 700, color: env.color, fontVariantNumeric: 'tabular-nums' }}>NT${(display?.total || 0).toLocaleString()}</div>
+                          <div style={{ fontSize: 11, color: 'var(--ink-faint)' }}>{pct}%</div>
+                        </>
+                      ) : (
+                        <div style={{ fontSize: 12, color: 'var(--ink-faint)' }}>不加入</div>
+                      )}
+                    </div>
+                    <div className="tap" onClick={() => toggleEnv(env.id)} style={{
+                      width: 28, height: 28, borderRadius: 14, flexShrink: 0,
+                      background: isActive ? env.color : '#E8E0DA',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, color: '#fff', fontWeight: 700,
+                      transition: 'background 0.2s',
+                    }}>
+                      {isActive ? '✓' : '✕'}
                     </div>
                   </div>
                 );
@@ -312,7 +359,7 @@ function FinancialAdvisorScreen({ onClose, onApply, foxFur = 'orange', foxAccess
             </div>
 
             <div style={{ background: 'var(--accent-faint)', borderRadius: 14, padding: '11px 14px', fontSize: 12, color: 'var(--ink-soft)', lineHeight: 1.6 }}>
-              ✿ 這是建議值，設定後可以在「預算管理」隨時調整金額和信封內容
+              ✿ 設定後可以在「預算管理」隨時調整金額和信封內容
             </div>
           </div>
         );
@@ -322,7 +369,7 @@ function FinancialAdvisorScreen({ onClose, onApply, foxFur = 'orange', foxAccess
     }
   };
 
-  const stepLabel = ['小桃理財規劃', '月收入', '固定支出', '存款狀況', '理財目標', '小桃的建議'];
+  const stepLabel = [`${foxName}理財規劃`, '月收入', '固定支出', '存款狀況', '理財目標', `${foxName}的建議`];
 
   return (
     <div style={{ position: 'absolute', inset: 0, zIndex: 80, background: 'var(--bg)', display: 'flex', flexDirection: 'column', animation: 'slide-up 0.3s ease-out' }}>
@@ -381,7 +428,7 @@ function FinancialAdvisorScreen({ onClose, onApply, foxFur = 'orange', foxAccess
               textAlign: 'center', fontSize: 14, color: 'var(--ink-soft)', fontWeight: 600,
               boxShadow: 'var(--shadow-sm)',
             }}>謝謝，我自己設定</div>
-            <div className="tap" onClick={() => onApply(suggested)} style={{
+            <div className="tap" onClick={() => onApply(getDisplayEnvs())} style={{
               flex: 2, padding: '15px 0', borderRadius: 16,
               background: 'linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%)',
               textAlign: 'center', fontSize: 15, color: '#fff', fontWeight: 700,

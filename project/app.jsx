@@ -185,7 +185,7 @@ function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   );
 }
 
-const APP_VERSION = 'v0.2.2';
+const APP_VERSION = 'v0.2.3';
 
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -797,7 +797,7 @@ function App() {
         )}
         {advisorOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 80, animation: 'slide-up 0.3s ease-out' }}>
-            <FinancialAdvisorScreen onClose={() => setAdvisorOpen(false)} onApply={handleApplyAdvisor} foxFur={foxState.fur} foxAccessory={foxState.accessory}/>
+            <FinancialAdvisorScreen onClose={() => setAdvisorOpen(false)} onApply={handleApplyAdvisor} foxFur={foxState.fur} foxAccessory={foxState.accessory} foxName={foxState.name || '小桃'}/>
           </div>
         )}
         {vaultOpen && (
