@@ -169,29 +169,31 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
           <span style={{ fontSize: 11, color: 'var(--ink-faint)', fontFamily: 'Caveat', fontWeight: 600 }}>tap to add ♥</span>
         </div>
         <div style={{ display: 'flex', gap: 10, overflowX: 'auto', paddingBottom: 4 }}>
-          {(envelopes.length > 0
-            ? envelopes.flatMap(env => env.cats.map(catId => ({ id: catId, envLabel: env.label, envColor: env.color }))).slice(0, 6)
-            : [
-                { id: 'drink' }, { id: 'food' },
-                { id: 'transport' }, { id: 'shop' }, { id: 'fun' },
-              ]
-          ).map((q, i) => {
-            const cat = CATEGORIES.find(c => c.id === q.id) || { label: q.id };
-            return (
-              <div key={i} className="tap pop-in" onClick={onAdd} style={{
-                flexShrink: 0, background: 'var(--card)', borderRadius: 18,
-                padding: '10px 12px 12px', minWidth: 92,
-                boxShadow: 'var(--shadow-sm)',
-                border: '1px solid #F5E8E0'
-              }}>
-                <CatBubble id={q.id} size={36} />
-                <div style={{ fontSize: 12, color: 'var(--ink)', marginTop: 6, fontWeight: 500 }}>{cat.label}</div>
-                {q.envLabel && (
-                  <div style={{ fontSize: 10, color: 'var(--ink-faint)', marginTop: 1 }}>{q.envLabel}</div>
-                )}
-              </div>
-            );
-          })}
+          {(() => {
+            const favCats = CATEGORIES.filter(c => c.fav);
+            const quickItems = favCats.length > 0
+              ? favCats.slice(0, 6).map(c => ({ id: c.id, envLabel: '' }))
+              : envelopes.length > 0
+                ? envelopes.flatMap(env => env.cats.map(catId => ({ id: catId, envLabel: env.label }))).slice(0, 6)
+                : [{ id: 'food' }, { id: 'drink' }, { id: 'transport' }, { id: 'shop' }, { id: 'fun' }];
+            return quickItems.map((q, i) => {
+              const cat = CATEGORIES.find(c => c.id === q.id) || { label: q.id };
+              return (
+                <div key={i} className="tap pop-in" onClick={() => onAdd({ cat: q.id, type: 'expense' })} style={{
+                  flexShrink: 0, background: 'var(--card)', borderRadius: 18,
+                  padding: '10px 12px 12px', minWidth: 92,
+                  boxShadow: 'var(--shadow-sm)',
+                  border: '1px solid #F5E8E0'
+                }}>
+                  <CatBubble id={q.id} size={36} />
+                  <div style={{ fontSize: 12, color: 'var(--ink)', marginTop: 6, fontWeight: 500 }}>{cat.label}</div>
+                  {q.envLabel && (
+                    <div style={{ fontSize: 10, color: 'var(--ink-faint)', marginTop: 1 }}>{q.envLabel}</div>
+                  )}
+                </div>
+              );
+            });
+          })()}
         </div>
       </div>
 

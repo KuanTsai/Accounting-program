@@ -173,14 +173,14 @@ function Toast({ show, withDiary, streak = 0, expGain = 10, isFirstToday = false
 }
 
 // ─── add modal wrapper ─────────────────────────────────
-function AddModal({ open, onClose, onDone, envelopes = [] }) {
+function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   if (!open) return null;
   return (
     <div style={{
       position: 'absolute', inset: 0, zIndex: 70,
       animation: 'slide-up 0.3s ease-out',
     }}>
-      <AddScreen onClose={onClose} envelopes={envelopes} onSave={(payload) => { onClose(); onDone(payload); }}/>
+      <AddScreen onClose={onClose} envelopes={envelopes} preset={preset} onSave={(payload) => { onClose(); onDone(payload); }}/>
     </div>
   );
 }
@@ -459,6 +459,7 @@ function calculateStreak(transactions) {
 function App() {
   const [tab, setTab] = useStateApp('home');
   const [addOpen, setAddOpen] = useStateApp(false);
+  const [addPreset, setAddPreset] = useStateApp({});
   const [budgetOpen, setBudgetOpen] = useStateApp(false);
   const [vaultOpen, setVaultOpen] = useStateApp(false);
   const [closeOpen, setCloseOpen] = useStateApp(false);
@@ -549,7 +550,7 @@ function App() {
     window.db.collection('users').doc(user.uid).collection('settings').doc('categories').get()
       .then(doc => {
         if (doc.exists && doc.data().cats && doc.data().cats.length > 0) {
-          const updated = doc.data().cats.filter(c => c.on !== false).map(({ id, label, color, bg }) => ({ id, label, color, bg }));
+          const updated = doc.data().cats.filter(c => c.on !== false).map(({ id, label, color, bg, fav }) => ({ id, label, color, bg, fav: !!fav }));
           CATEGORIES.splice(0, CATEGORIES.length, ...updated);
         }
       })
@@ -595,7 +596,7 @@ function App() {
       .onSnapshot(doc => setMonthClosed(doc.exists));
   }, [user]);
 
-  const handleAdd = () => setAddOpen(true);
+  const handleAdd = (preset = {}) => { setAddPreset(preset); setAddOpen(true); };
   const handleLogout = async () => {
     try {
       await window.auth.signOut();
@@ -747,7 +748,7 @@ function App() {
         {renderScreen()}
       </div>
       <BottomNav current={tab} onSelect={setTab} onAdd={handleAdd} isMobile={true}/>
-        <AddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={handleSaved} envelopes={envelopes}/>
+        <AddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={handleSaved} envelopes={envelopes} preset={addPreset}/>
         {budgetOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
             <BudgetScreen onClose={() => setBudgetOpen(false)} transactions={transactions}/>

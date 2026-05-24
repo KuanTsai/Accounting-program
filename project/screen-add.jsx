@@ -2,10 +2,10 @@
 
 const { useState: useStateAdd } = React;
 
-function AddScreen({ onClose, onSave, envelopes = [] }) {
+function AddScreen({ onClose, onSave, envelopes = [], preset = {} }) {
   const [amount, setAmount] = useStateAdd('0');
-  const [cat, setCat] = useStateAdd('food');
-  const [type, setType] = useStateAdd('expense'); // expense | income
+  const [cat, setCat] = useStateAdd(() => preset.cat || 'food');
+  const [type, setType] = useStateAdd(() => preset.type || 'expense'); // expense | income
   const [note, setNote] = useStateAdd('');
   const [mood, setMood] = useStateAdd(null);
   const [diaryOpen, setDiaryOpen] = useStateAdd(false);
