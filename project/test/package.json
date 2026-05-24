@@ -1,0 +1,12 @@
+{
+  "name": "momoka-tests",
+  "version": "1.0.0",
+  "description": "Integration tests for 小桃の記帳日記",
+  "scripts": {
+    "test": "node run-tests.js",
+    "test:watch": "node run-tests.js"
+  },
+  "dependencies": {
+    "playwright": "^1.40.0"
+  }
+}

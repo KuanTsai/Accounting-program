@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>小桃 Test Harness</title>
+<!-- Local copies — no CDN required -->
+<script src="../lib/react.development.js"></script>
+<script src="../lib/react-dom.development.js"></script>
+<script src="../lib/babel.js"></script>
+<!-- Firebase mock must come before firebase.js -->
+<script src="firebase-mock.js"></script>
+<!-- App styles -->
+<link rel="stylesheet" href="../styles.css"/>
+</head>
+<body style="font-family: 'Noto Sans TC', sans-serif">
+<div id="root"></div>
+
+<!-- All app JSX, same order as index.html -->
+<script type="text/babel" src="../ios-frame.jsx"></script>
+<script type="text/babel" src="../tweaks-panel.jsx"></script>
+<script type="text/babel" src="../fox.jsx"></script>
+<script type="text/babel" src="../categories.jsx"></script>
+<script type="text/babel" src="../screen-login.jsx"></script>
+<script type="text/babel" src="../screen-home.jsx"></script>
+<script type="text/babel" src="../screen-add.jsx"></script>
+<script type="text/babel" src="../screen-stats.jsx"></script>
+<script type="text/babel" src="../screen-diary.jsx"></script>
+<script type="text/babel" src="../screen-profile.jsx"></script>
+<script type="text/babel" src="../screen-budget.jsx"></script>
+<script type="text/babel" src="../screen-vault.jsx"></script>
+<script type="text/babel" src="../screen-new-goal.jsx"></script>
+<script type="text/babel" src="../screen-pot-action.jsx"></script>
+<script type="text/babel" src="../screen-categories.jsx"></script>
+<script type="text/babel" src="../screen-fox.jsx"></script>
+<script type="text/babel" src="../screen-onboarding.jsx"></script>
+<script type="text/babel" src="../screen-close.jsx"></script>
+<!-- firebase.js sets window.db + window.auth from the mock -->
+<script src="../firebase.js"></script>
+<script type="text/babel" src="../app.jsx"></script>
+</body>
+</html>
