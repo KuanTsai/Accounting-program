@@ -185,7 +185,7 @@ function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   );
 }
 
-const APP_VERSION = 'v0.2.4';
+const APP_VERSION = 'v0.2.5';
 
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -724,6 +724,32 @@ function App() {
     setDepositPot(null);
   };
 
+  const handleImportBalances = async (values) => {
+    if (!user) return;
+    const uid = user.uid;
+    const vaultEnvs = envelopes.filter(e => e.vault);
+    const batch = window.db.batch();
+    Object.entries(values).forEach(([envId, rawVal]) => {
+      const amount = parseFloat(rawVal) || 0;
+      if (amount <= 0) return;
+      const env = vaultEnvs.find(e => e.id === envId);
+      const existing = autoPots.find(p => p.id === envId);
+      const ref = window.db.collection('users').doc(uid).collection('autopots').doc(envId);
+      if (existing) {
+        batch.update(ref, { total: firebase.firestore.FieldValue.increment(amount) });
+      } else {
+        batch.set(ref, {
+          total: amount, monthly: 0, history: [],
+          label: env?.label || envId,
+          emoji: env?.emoji || '💰',
+          color: env?.color || '#FFB97A',
+          bg: env?.bg || '#FFE9D6',
+        });
+      }
+    });
+    await batch.commit();
+  };
+
   const handleWithdrawConfirm = async ({ pot, amount }) => {
     if (!user) return;
     await window.db.collection('users').doc(user.uid).collection('autopots').doc(pot.id).update({
@@ -809,8 +835,10 @@ function App() {
               onDeposit={(pot) => setDepositPot(pot)}
               onEditGoal={(pot) => setEditingGoal(pot)}
               onOpenClose={() => { setVaultOpen(false); setCloseOpen(true); }}
+              onImport={handleImportBalances}
               goalPots={goalPots}
               autoPots={autoPots}
+              budgetEnvelopes={envelopes}
               foxFur={foxState.fur}
               foxAccessory={foxState.accessory}
             />

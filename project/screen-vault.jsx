@@ -2,8 +2,9 @@
 
 const { useState: useStateVault } = React;
 
-function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, onEditGoal, onOpenClose, goalPots = [], autoPots = [], foxFur = 'orange', foxAccessory = 'none' }) {
+function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, onEditGoal, onOpenClose, onImport, goalPots = [], autoPots = [], budgetEnvelopes = [], foxFur = 'orange', foxAccessory = 'none' }) {
   const [tab, setTab] = useStateVault('all'); // all | auto | goal
+  const [importOpen, setImportOpen] = useStateVault(false);
 
   const totalAuto = autoPots.reduce((s, p) => s + (p.total || 0), 0);
   const totalGoal = goalPots.reduce((s, p) => s + (p.saved || 0), 0);
@@ -138,9 +139,18 @@ function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, onEditGoal, on
           <div style={{ padding: '16px 20px 0' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
               <div className="hand" style={{ fontSize: 20, color: 'var(--ink)' }}>預算金庫</div>
-              <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
-                {autoPots.length} 個 · 共 ${totalAuto.toLocaleString()}
-              </span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                {onImport && (
+                  <span className="tap" onClick={() => setImportOpen(true)} style={{
+                    fontSize: 11, color: 'var(--accent)', fontWeight: 600,
+                    padding: '3px 10px', borderRadius: 999,
+                    background: 'var(--accent-faint)',
+                  }}>匯入存款 ↑</span>
+                )}
+                <span style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
+                  {autoPots.length} 個 · 共 ${totalAuto.toLocaleString()}
+                </span>
+              </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               {autoPots.map(p => <AutoPotCard key={p.id} pot={p} onWithdraw={() => onWithdraw && onWithdraw(p)}/>)}
@@ -192,6 +202,15 @@ function VaultScreen({ onClose, onAddGoal, onWithdraw, onDeposit, onEditGoal, on
           </div>
         </div>
       </div>
+
+      {importOpen && (
+        <ImportBalanceSheet
+          budgetEnvelopes={budgetEnvelopes}
+          autoPots={autoPots}
+          onClose={() => setImportOpen(false)}
+          onConfirm={async (values) => { if (onImport) await onImport(values); }}
+        />
+      )}
     </div>
   );
 }
@@ -333,4 +352,118 @@ function GoalPotCard({ pot, onDeposit, onEdit }) {
   );
 }
 
-Object.assign(window, { VaultScreen, AutoPotCard, GoalPotCard });
+function ImportBalanceSheet({ budgetEnvelopes, autoPots, onClose, onConfirm }) {
+  const [values, setValues] = useStateVault({});
+  const [working, setWorking] = useStateVault(false);
+
+  const vaultEnvs = budgetEnvelopes.filter(e => e.vault);
+  const total = Object.values(values).reduce((s, v) => s + (parseFloat(v) || 0), 0);
+
+  const handleConfirm = async () => {
+    if (total === 0 || working) return;
+    setWorking(true);
+    try { await onConfirm(values); onClose(); }
+    finally { setWorking(false); }
+  };
+
+  return (
+    <div style={{ position: 'absolute', inset: 0, zIndex: 90, background: 'rgba(0,0,0,0.22)' }} onClick={onClose}>
+      <div style={{
+        position: 'absolute', bottom: 0, left: 0, right: 0,
+        background: 'var(--card)',
+        borderRadius: '28px 28px 0 0',
+        padding: '20px 20px',
+        paddingBottom: 'max(24px, env(safe-area-inset-bottom, 24px))',
+        animation: 'slide-up 0.3s ease-out',
+        boxShadow: '0 -8px 30px rgba(0,0,0,0.08)',
+        maxHeight: '85vh', overflowY: 'auto',
+      }} onClick={e => e.stopPropagation()}>
+        <div style={{ width: 36, height: 4, background: 'var(--ink-faint)', borderRadius: 2, margin: '0 auto 20px' }} />
+        <div className="hand" style={{ fontSize: 22, color: 'var(--ink)', marginBottom: 6 }}>匯入現有存款 ✿</div>
+        <div style={{ fontSize: 13, color: 'var(--ink-soft)', marginBottom: 16, lineHeight: 1.55 }}>
+          把你之前在其他系統各信封的餘額輸入進來，小桃幫你同步！
+        </div>
+
+        {vaultEnvs.length === 0 ? (
+          <div style={{
+            textAlign: 'center', padding: '30px 0',
+            color: 'var(--ink-soft)', fontSize: 14, lineHeight: 1.7,
+          }}>
+            還沒有設定預算金庫的信封。<br/>
+            <span style={{ fontSize: 12 }}>請先在「預算管理」中開啟信封的金庫功能。</span>
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {vaultEnvs.map(env => {
+              const existing = autoPots.find(p => p.id === env.id);
+              return (
+                <div key={env.id} style={{
+                  display: 'flex', alignItems: 'center', gap: 12,
+                  background: 'var(--bg-paper)', borderRadius: 16, padding: '12px 14px',
+                }}>
+                  <div style={{
+                    width: 38, height: 38, borderRadius: 12,
+                    background: env.bg || '#FFE9D6',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: 18, flexShrink: 0,
+                  }}>{env.emoji || '💰'}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 600 }}>{env.label}</div>
+                    <div style={{ fontSize: 11, color: 'var(--ink-faint)' }}>
+                      現有 ${(existing?.total || 0).toLocaleString()}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span style={{ fontSize: 13, color: 'var(--ink-soft)' }}>NT$</span>
+                    <input
+                      type="number"
+                      min="0"
+                      placeholder="0"
+                      value={values[env.id] || ''}
+                      onChange={e => setValues(v => ({ ...v, [env.id]: e.target.value }))}
+                      style={{
+                        width: 90, padding: '6px 10px', borderRadius: 10,
+                        border: '1.5px solid var(--accent-soft)',
+                        fontSize: 15, fontWeight: 700, color: 'var(--ink)',
+                        textAlign: 'right', background: '#fff', outline: 'none',
+                      }}
+                    />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {total > 0 && (
+          <div style={{
+            marginTop: 12, padding: '10px 14px', borderRadius: 14,
+            background: 'var(--accent-faint)',
+            fontSize: 13, color: 'var(--accent)', fontWeight: 600,
+            textAlign: 'center',
+          }}>
+            共匯入 NT${total.toLocaleString()} 到各信封金庫
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+          <div className="tap" onClick={onClose} style={{
+            flex: 1, padding: '13px', borderRadius: 16,
+            background: 'var(--bg)', textAlign: 'center',
+            fontSize: 15, color: 'var(--ink-soft)', fontWeight: 600,
+          }}>取消</div>
+          {vaultEnvs.length > 0 && (
+            <div className="tap" onClick={handleConfirm} style={{
+              flex: 2, padding: '13px', borderRadius: 16,
+              background: working || total === 0 ? 'var(--ink-faint)' : 'linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%)',
+              textAlign: 'center', fontSize: 15, color: '#fff', fontWeight: 700,
+              opacity: total === 0 && !working ? 0.6 : 1,
+            }}>{working ? '匯入中…' : total === 0 ? '請輸入金額' : '確認匯入 ✓'}</div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+Object.assign(window, { VaultScreen, AutoPotCard, GoalPotCard, ImportBalanceSheet });
