@@ -2,7 +2,7 @@
 
 const { useState: useStateClose, useEffect: useEffectClose } = React;
 
-function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = [] }) {
+function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = [], foxFur = 'orange', foxAccessory = 'none' }) {
   const now = new Date();
   const closeYear = now.getFullYear();
   const closeMonth = now.getMonth();
@@ -113,6 +113,7 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
     return <ConfirmOverlay totalSaved={totalSaved} totalRollover={totalRollover}
       transactions={transactions} goalPots={goalPots}
       closeMonth={closeMonth} closeYear={closeYear} closeMonthLabel={closeMonthLabel}
+      foxFur={foxFur} foxAccessory={foxAccessory}
       onClose={onConfirm}/>;
   }
 
@@ -134,7 +135,7 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
           <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>{closeMonthLabel}結算</div>
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 30px', textAlign: 'center', gap: 16 }}>
-          <Fox mood="neutral" size={80}/>
+          <Fox mood="neutral" size={80} fur={foxFur} accessory={foxAccessory}/>
           <div className="hand" style={{ fontSize: 20, color: 'var(--ink)' }}>還沒設定預算</div>
           <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.6 }}>
             請先到「我的 → 預算管理」設定每月預算，<br/>結算才能幫你計算每個分類省下多少 ✿
@@ -168,7 +169,7 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
             <div className="sparkle" style={{ position: 'absolute', top: 18, right: 26, fontSize: 14, color: 'var(--secondary)' }}>✦</div>
             <div className="sparkle" style={{ position: 'absolute', bottom: 24, right: 90, fontSize: 10, color: 'var(--lavender)', animationDelay: '0.5s' }}>★</div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-              <div className="wiggle"><Fox mood="celebrate" size={76}/></div>
+              <div className="wiggle"><Fox mood="celebrate" size={76} fur={foxFur} accessory={foxAccessory}/></div>
               <div style={{ flex: 1 }}>
                 <div className="hand" style={{ fontSize: 17, color: 'var(--ink)', lineHeight: 1.35 }}>
                   {closeMonthLabel}過完啦！<br/>來看看你存了多少 ✿
@@ -301,7 +302,7 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
 }
 
 // ── Confirmation overlay (fox ceremony) ──────────────
-function ConfirmOverlay({ totalSaved, totalRollover, transactions, goalPots, closeMonth, closeYear, closeMonthLabel, onClose }) {
+function ConfirmOverlay({ totalSaved, totalRollover, transactions, goalPots, closeMonth, closeYear, closeMonthLabel, foxFur = 'orange', foxAccessory = 'none', onClose }) {
   const thisMonthExp = transactions.filter(tx => {
     if (!tx.createdAt || tx.amt >= 0) return false;
     const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
@@ -356,7 +357,7 @@ function ConfirmOverlay({ totalSaved, totalRollover, transactions, goalPots, clo
       )}
 
       <div style={{ flex: 1, width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 26, overflowY: 'auto' }}>
-        <div className="wiggle"><Fox mood="celebrate" size={108}/></div>
+        <div className="wiggle"><Fox mood="celebrate" size={108} fur={foxFur} accessory={foxAccessory}/></div>
         <div className="hand" style={{ fontSize: 26, color: 'var(--ink)', marginTop: 10 }}>結算完成！</div>
         <div style={{ fontSize: 16, color: 'var(--accent)', marginTop: 4, textAlign: 'center', fontFamily: "'ChenYuluoyan', 'Noto Sans TC', sans-serif", letterSpacing: '0.04em' }}>
           {tagline}

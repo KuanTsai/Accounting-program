@@ -177,8 +177,8 @@ function Tape({ color = 'var(--accent-soft)', rotate = -8, style = {} }) {
   return (
     <div style={{
       position: 'absolute', width: 70, height: 20,
-      background: color, opacity: 0.85,
-      backgroundImage: 'repeating-linear-gradient(45deg, transparent 0, transparent 5px, rgba(255,255,255,0.4) 5px, rgba(255,255,255,0.4) 9px)',
+      background: `repeating-linear-gradient(45deg, transparent 0, transparent 5px, rgba(255,255,255,0.4) 5px, rgba(255,255,255,0.4) 9px) ${color}`,
+      opacity: 0.85,
       transform: `rotate(${rotate}deg)`,
       boxShadow: '0 1px 2px rgba(0,0,0,0.06)',
       ...style,

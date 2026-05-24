@@ -141,7 +141,7 @@ function LevelUpOverlay({ info, foxState, onClose }) {
 }
 
 // ─── celebration toast (after add) ─────────────────────
-function Toast({ show, withDiary, streak = 0, expGain = 10, isFirstToday = false }) {
+function Toast({ show, withDiary, streak = 0, expGain = 10, isFirstToday = false, foxFur = 'orange', foxAccessory = 'none' }) {
   if (!show) return null;
   const bonusNote = isFirstToday ? '　首筆 +5 ✦' : streak >= 7 ? `　連續 ${streak} 天加成` : '';
   return (
@@ -159,7 +159,7 @@ function Toast({ show, withDiary, streak = 0, expGain = 10, isFirstToday = false
         minWidth: 220,
       }}>
         <div style={{ display: 'flex', justifyContent: 'center' }}>
-          <Fox mood="celebrate" size={80}/>
+          <Fox mood="celebrate" size={80} fur={foxFur} accessory={foxAccessory}/>
         </div>
         <div className="hand" style={{ fontSize: 22, color: 'var(--ink)', marginTop: 8 }}>
           {withDiary ? '記錄＋日記都完成！' : '你做得很棒！'}
@@ -863,6 +863,8 @@ function App() {
               onConfirm={() => setCloseOpen(false)}
               transactions={transactions}
               goalPots={goalPots}
+              foxFur={foxState.fur}
+              foxAccessory={foxState.accessory}
             />
           </div>
         )}
@@ -876,7 +878,7 @@ function App() {
             onClose={() => setPaletteOpen(false)}
           />
         )}
-        <Toast show={toast} withDiary={toastDiary} streak={liveData.streak} expGain={toastExpGain} isFirstToday={toastFirstToday}/>
+        <Toast show={toast} withDiary={toastDiary} streak={liveData.streak} expGain={toastExpGain} isFirstToday={toastFirstToday} foxFur={foxState.fur} foxAccessory={foxState.accessory}/>
         {levelUpInfo && <LevelUpOverlay info={levelUpInfo} foxState={foxState} onClose={() => { setLevelUpInfo(null); setFoxMoodOverride(null); }}/>}
       </div>
   );
