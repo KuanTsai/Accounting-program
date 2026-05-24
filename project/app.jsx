@@ -185,7 +185,7 @@ function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   );
 }
 
-const APP_VERSION = 'v0.1.0';
+const APP_VERSION = 'v0.1.1';
 
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -699,11 +699,17 @@ function App() {
     setEditingGoal(null);
   };
 
-  const handleDepositConfirm = async ({ pot, amount }) => {
+  const handleDepositConfirm = async ({ pot, amount, source }) => {
     if (!user) return;
-    await window.db.collection('users').doc(user.uid).collection('goals').doc(pot.id).update({
+    const uid = user.uid;
+    await window.db.collection('users').doc(uid).collection('goals').doc(pot.id).update({
       saved: firebase.firestore.FieldValue.increment(amount),
     });
+    if (source && source.id !== 'main') {
+      await window.db.collection('users').doc(uid).collection('autopots').doc(source.id).update({
+        total: firebase.firestore.FieldValue.increment(-amount),
+      });
+    }
     setDepositPot(null);
   };
 
