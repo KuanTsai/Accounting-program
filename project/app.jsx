@@ -185,7 +185,7 @@ function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   );
 }
 
-const APP_VERSION = 'v0.2.5';
+const APP_VERSION = 'v0.2.6';
 
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -405,7 +405,7 @@ function SettingsSheet({ user, onLogout, onClose }) {
         }}>關閉</div>
 
         <div style={{ marginTop: 16, textAlign: 'center', fontSize: 11, color: 'var(--ink-faint)' }}>
-          小桃の記帳日記 {APP_VERSION}
+          小桃の信封日記 {APP_VERSION}
         </div>
       </div>
     </div>

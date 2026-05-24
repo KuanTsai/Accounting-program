@@ -1,7 +1,7 @@
 {
-  "name": "小桃の記帳日記",
-  "short_name": "小桃記帳",
-  "description": "可愛的日記風記帳 APP",
+  "name": "小桃の信封日記",
+  "short_name": "小桃信封",
+  "description": "可愛的信封理財日記 APP",
   "start_url": "/Accounting-program/",
   "scope": "/Accounting-program/",
   "display": "standalone",
