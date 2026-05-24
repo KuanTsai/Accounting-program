@@ -185,7 +185,7 @@ function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   );
 }
 
-const APP_VERSION = 'v0.1.4';
+const APP_VERSION = 'v0.1.3';
 
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -526,11 +526,6 @@ function App() {
     const p = PALETTES[tweaks.palette] || PALETTES.sakura;
     Object.entries(p).forEach(([k, v]) => document.documentElement.style.setProperty(k, v));
   }, [tweaks.palette]);
-
-  // handle redirect result from Google sign-in
-  useEffectApp(() => {
-    window.auth.getRedirectResult().catch(() => {});
-  }, []);
 
   // auth state + profile check (determines onboarding)
   useEffectApp(() => {

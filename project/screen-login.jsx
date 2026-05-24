@@ -8,7 +8,7 @@ function LoginScreen() {
     setLoading(true);
     setError('');
     try {
-      await window.auth.signInWithRedirect(window.googleProvider);
+      await window.auth.signInWithPopup(window.googleProvider);
     } catch (e) {
       setError('登入失敗，請再試一次');
       setLoading(false);
