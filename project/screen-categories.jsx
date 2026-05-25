@@ -284,7 +284,7 @@ function AddCatRow({ label, onClick }) {
 }
 
 // ── Edit / Create category bottom sheet ─────────────────────────
-const CAT_PRESET_ICONS = ['food', 'drink', 'transport', 'shop', 'fun', 'beauty', 'home', 'health', 'study', 'gift', 'travel', 'salary'];
+const CAT_PRESET_ICONS = ['food', 'drink', 'transport', 'shop', 'fun', 'beauty', 'home', 'health', 'study', 'gift', 'travel', 'salary', 'coffee', 'pet', 'phone', 'gym', 'music', 'movie', 'baby', 'invest', 'sub', 'rent', 'snack', 'bill'];
 const CAT_PRESET_COLORS = [
   { color: '#FF8FAB', bg: '#FFE5EC' },
   { color: '#FFB97A', bg: '#FFE9D6' },

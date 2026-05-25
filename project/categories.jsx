@@ -124,12 +124,140 @@ function CatIcon({ id, size = 24, color = '#fff' }) {
           <path d="M 6 12 L 6 17 Q 6 19 12 19 Q 18 19 18 17 L 18 12"/>
         </svg>
       );
+    case 'coffee': // coffee mug with steam
+      return (
+        <svg {...props}>
+          <path d="M 5 9 L 17 9 L 16.5 19 Q 11 20 5.5 19 Z" fill={color} fillOpacity="0.25"/>
+          <path d="M 5 9 L 17 9 L 16.5 19 Q 11 20 5.5 19 Z"/>
+          <path d="M 17 11 Q 21 11 21 15 Q 21 19 17 19" fill="none"/>
+          <path d="M 9 5.5 Q 9.8 7 9 9" strokeWidth="1.5"/>
+          <path d="M 13 4 Q 13.8 6 13 9" strokeWidth="1.5"/>
+        </svg>
+      );
+    case 'pet': // paw print
+      return (
+        <svg {...props}>
+          <ellipse cx="12" cy="16" rx="4.5" ry="3.8" fill={color} fillOpacity="0.25"/>
+          <ellipse cx="12" cy="16" rx="4.5" ry="3.8"/>
+          <circle cx="7" cy="10.5" r="2" fill={color} fillOpacity="0.35"/>
+          <circle cx="7" cy="10.5" r="2"/>
+          <circle cx="12" cy="9" r="2" fill={color} fillOpacity="0.35"/>
+          <circle cx="12" cy="9" r="2"/>
+          <circle cx="17" cy="10.5" r="2" fill={color} fillOpacity="0.35"/>
+          <circle cx="17" cy="10.5" r="2"/>
+        </svg>
+      );
+    case 'phone': // smartphone
+      return (
+        <svg {...props}>
+          <rect x="7" y="2" width="10" height="20" rx="3" fill={color} fillOpacity="0.25"/>
+          <rect x="7" y="2" width="10" height="20" rx="3"/>
+          <line x1="9.5" y1="5.5" x2="14.5" y2="5.5"/>
+          <circle cx="12" cy="18.5" r="1.2" fill={color}/>
+        </svg>
+      );
+    case 'gym': // dumbbell
+      return (
+        <svg {...props}>
+          <line x1="8.5" y1="12" x2="15.5" y2="12"/>
+          <rect x="2" y="9" width="4" height="6" rx="1.5" fill={color} fillOpacity="0.3"/>
+          <rect x="2" y="9" width="4" height="6" rx="1.5"/>
+          <rect x="18" y="9" width="4" height="6" rx="1.5" fill={color} fillOpacity="0.3"/>
+          <rect x="18" y="9" width="4" height="6" rx="1.5"/>
+          <rect x="5.5" y="10" width="3" height="4" rx="1" fill={color} fillOpacity="0.3"/>
+          <rect x="5.5" y="10" width="3" height="4" rx="1"/>
+          <rect x="15.5" y="10" width="3" height="4" rx="1" fill={color} fillOpacity="0.3"/>
+          <rect x="15.5" y="10" width="3" height="4" rx="1"/>
+        </svg>
+      );
+    case 'music': // music note
+      return (
+        <svg {...props}>
+          <line x1="13" y1="5" x2="13" y2="18"/>
+          <path d="M 13 5 L 20 3 L 20 9 L 13 11"/>
+          <ellipse cx="10" cy="18.5" rx="3.5" ry="2.5" fill={color} fillOpacity="0.3"/>
+          <ellipse cx="10" cy="18.5" rx="3.5" ry="2.5"/>
+        </svg>
+      );
+    case 'movie': // clapperboard
+      return (
+        <svg {...props}>
+          <rect x="3" y="9" width="18" height="12" rx="2" fill={color} fillOpacity="0.25"/>
+          <rect x="3" y="9" width="18" height="12" rx="2"/>
+          <rect x="3" y="4.5" width="18" height="5.5" rx="2" fill={color} fillOpacity="0.4"/>
+          <rect x="3" y="4.5" width="18" height="5.5" rx="2"/>
+          <line x1="7" y1="4.5" x2="5.5" y2="10"/>
+          <line x1="12" y1="4.5" x2="10.5" y2="10"/>
+          <line x1="17" y1="4.5" x2="15.5" y2="10"/>
+        </svg>
+      );
+    case 'baby': // baby bottle
+      return (
+        <svg {...props}>
+          <rect x="9" y="2" width="6" height="3" rx="1" fill={color} fillOpacity="0.35"/>
+          <rect x="9" y="2" width="6" height="3" rx="1"/>
+          <path d="M 8 5 Q 7 9 7 14 Q 7 21 12 21 Q 17 21 17 14 Q 17 9 16 5 Z" fill={color} fillOpacity="0.25"/>
+          <path d="M 8 5 Q 7 9 7 14 Q 7 21 12 21 Q 17 21 17 14 Q 17 9 16 5 Z"/>
+          <line x1="9.5" y1="10" x2="14.5" y2="10" strokeWidth="1.2"/>
+          <line x1="9.5" y1="13.5" x2="14.5" y2="13.5" strokeWidth="1.2"/>
+        </svg>
+      );
+    case 'invest': // upward trend chart
+      return (
+        <svg {...props}>
+          <line x1="3" y1="20" x2="21" y2="20"/>
+          <line x1="3" y1="4" x2="3" y2="20"/>
+          <polyline points="4,18 8,13 13,15 20,7" fill="none" strokeWidth="2"/>
+          <circle cx="20" cy="7" r="2" fill={color} fillOpacity="0.5"/>
+          <circle cx="20" cy="7" r="2"/>
+        </svg>
+      );
+    case 'sub': // subscription / streaming
+      return (
+        <svg {...props}>
+          <rect x="2" y="5" width="20" height="14" rx="4" fill={color} fillOpacity="0.25"/>
+          <rect x="2" y="5" width="20" height="14" rx="4"/>
+          <path d="M 9.5 8.5 L 9.5 15.5 L 16.5 12 Z" fill={color} fillOpacity="0.7"/>
+          <path d="M 9.5 8.5 L 9.5 15.5 L 16.5 12 Z"/>
+        </svg>
+      );
+    case 'rent': // apartment building
+      return (
+        <svg {...props}>
+          <rect x="4" y="4" width="16" height="17" rx="1.5" fill={color} fillOpacity="0.25"/>
+          <rect x="4" y="4" width="16" height="17" rx="1.5"/>
+          <rect x="6.5" y="7" width="3" height="3" rx="0.8" fill={color} fillOpacity="0.5"/>
+          <rect x="14.5" y="7" width="3" height="3" rx="0.8" fill={color} fillOpacity="0.5"/>
+          <rect x="6.5" y="13" width="3" height="3" rx="0.8" fill={color} fillOpacity="0.5"/>
+          <rect x="14.5" y="13" width="3" height="3" rx="0.8" fill={color} fillOpacity="0.5"/>
+          <rect x="10" y="17" width="4" height="4" fill={color} fillOpacity="0.35"/>
+          <rect x="10" y="17" width="4" height="4"/>
+        </svg>
+      );
+    case 'snack': // cupcake / dessert
+      return (
+        <svg {...props}>
+          <path d="M 7.5 15 L 8.5 21 L 15.5 21 L 16.5 15 Z" fill={color} fillOpacity="0.25"/>
+          <path d="M 7.5 15 L 8.5 21 L 15.5 21 L 16.5 15 Z"/>
+          <path d="M 5 15 Q 5 10 8.5 10 Q 10 7.5 12 7.5 Q 14 7.5 15.5 10 Q 19 10 19 15 Z" fill={color} fillOpacity="0.4"/>
+          <path d="M 5 15 Q 5 10 8.5 10 Q 10 7.5 12 7.5 Q 14 7.5 15.5 10 Q 19 10 19 15 Z"/>
+          <path d="M 10 7 Q 11.5 4 13 7" fill="none"/>
+          <line x1="12" y1="3.5" x2="12" y2="4.5" strokeWidth="1.5"/>
+        </svg>
+      );
+    case 'bill': // lightning bolt — utilities / electricity
+      return (
+        <svg {...props}>
+          <path d="M 14 2 L 6 14 L 12 14 L 10 22 L 18 10 L 12 10 Z" fill={color} fillOpacity="0.35"/>
+          <path d="M 14 2 L 6 14 L 12 14 L 10 22 L 18 10 L 12 10 Z"/>
+        </svg>
+      );
     default:
       return <svg {...props}><circle cx="12" cy="12" r="8"/></svg>;
   }
 }
 
-const BUILTIN_IDS = ['food','drink','transport','shop','fun','beauty','home','health','study','gift','travel','salary'];
+const BUILTIN_IDS = ['food','drink','transport','shop','fun','beauty','home','health','study','gift','travel','salary','coffee','pet','phone','gym','music','movie','baby','invest','sub','rent','snack','bill'];
 
 // circular icon w/ background — used in lists, chips, etc
 function CatBubble({ id, size = 44 }) {
