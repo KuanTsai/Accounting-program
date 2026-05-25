@@ -12,10 +12,20 @@ function StatsScreen({ data, transactions = [], envelopes = [] }) {
 
   const total = data.expense;
 
-  // Category breakdown
+  // Category breakdown (all transactions, for the pie chart)
   const catTotals = {};
   monthlyExpense.forEach(tx => {
     catTotals[tx.cat] = (catTotals[tx.cat] || 0) + Math.abs(tx.amt);
+  });
+  // Envelope usage: explicit assignment takes priority over category matching
+  const envExplicit = {};
+  const catImplicit = {};
+  monthlyExpense.forEach(tx => {
+    if (tx.envelope) {
+      envExplicit[tx.envelope] = (envExplicit[tx.envelope] || 0) + Math.abs(tx.amt);
+    } else {
+      catImplicit[tx.cat] = (catImplicit[tx.cat] || 0) + Math.abs(tx.amt);
+    }
   });
   const breakdown = Object.entries(catTotals)
     .sort((a, b) => b[1] - a[1])
@@ -159,7 +169,7 @@ function StatsScreen({ data, transactions = [], envelopes = [] }) {
           <div className="hand" style={{ fontSize: 20, color: 'var(--ink)', marginBottom: 10 }}>信封分析</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {envelopes.map(env => {
-              const used = (env.cats || []).reduce((s, cid) => s + (catTotals[cid] || 0), 0);
+              const used = (envExplicit[env.id] || 0) + (env.cats || []).reduce((s, cid) => s + (catImplicit[cid] || 0), 0);
               const pct = env.total > 0 ? Math.min(100, Math.round((used / env.total) * 100)) : 0;
               const over = used > env.total;
               return (

@@ -185,7 +185,7 @@ function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   );
 }
 
-const APP_VERSION = 'v0.3.0';
+const APP_VERSION = 'v0.3.1';
 
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -783,9 +783,14 @@ function App() {
   });
   const income = monthlyTxs.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0);
   const expense = Math.abs(monthlyTxs.filter(t => t.amt < 0).reduce((s, t) => s + t.amt, 0));
-  const catUsed = {};
+  const catUsed = {};    // cat → amount，給沒有明確選信封的交易用
+  const envExplicit = {}; // envId → amount，給有明確選信封的交易用
   monthlyTxs.filter(t => t.amt < 0).forEach(t => {
-    catUsed[t.cat] = (catUsed[t.cat] || 0) + Math.abs(t.amt);
+    if (t.envelope) {
+      envExplicit[t.envelope] = (envExplicit[t.envelope] || 0) + Math.abs(t.amt);
+    } else {
+      catUsed[t.cat] = (catUsed[t.cat] || 0) + Math.abs(t.amt);
+    }
   });
   const todayTxs = transactions.filter(tx => {
     if (!tx.createdAt) return false;
@@ -807,7 +812,7 @@ function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} envelopes={envelopes} catUsed={catUsed} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} onEdit={setEditingTx} showCloseBanner={!monthClosed}/>;
+      case 'home': return <HomeScreen data={liveData} envelopes={envelopes} catUsed={catUsed} envExplicit={envExplicit} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} onEdit={setEditingTx} showCloseBanner={!monthClosed}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions} envelopes={envelopes}/>;
       case 'diary': return <DiaryScreen transactions={transactions} onAdd={handleAdd}/>;
       case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} palette={tweaks.palette} foxState={foxState} transactions={transactions} envelopes={envelopes} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;

@@ -27,17 +27,24 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
   }, []);
 
   // Compute real used amounts for this month
-  const catUsed = {};
+  const envExplicit = {};
+  const catImplicit = {};
   transactions.filter(tx => {
     if (!tx.createdAt || tx.amt >= 0) return false;
     const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
     return d.getFullYear() === closeYear && d.getMonth() === closeMonth;
-  }).forEach(tx => { catUsed[tx.cat] = (catUsed[tx.cat] || 0) + Math.abs(tx.amt); });
+  }).forEach(tx => {
+    if (tx.envelope) {
+      envExplicit[tx.envelope] = (envExplicit[tx.envelope] || 0) + Math.abs(tx.amt);
+    } else {
+      catImplicit[tx.cat] = (catImplicit[tx.cat] || 0) + Math.abs(tx.amt);
+    }
+  });
 
   const items = envelopes
     .filter(env => env.total > 0)
     .map(env => {
-      const used = (env.cats || []).reduce((s, cid) => s + (catUsed[cid] || 0), 0);
+      const used = (envExplicit[env.id] || 0) + (env.cats || []).reduce((s, cid) => s + (catImplicit[cid] || 0), 0);
       return { envId: env.id, label: env.label, emoji: env.emoji, color: env.color, bg: env.bg, total: env.total, used, leftover: Math.max(0, env.total - used), vault: env.vault };
     })
     .filter(it => it.leftover > 0);

@@ -30,7 +30,7 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // ─────────────────────────────────────────────────────────────
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
-function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onEdit, onOpenPalette, onOpenSettings, showCloseBanner = true, envelopes = [], catUsed = {} }) {
+function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onEdit, onOpenPalette, onOpenSettings, showCloseBanner = true, envelopes = [], catUsed = {}, envExplicit = {} }) {
   const isNearMonthEnd = (() => {
     const d = new Date();
     const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
@@ -41,10 +41,10 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
   const monthLabel = `${_now.getMonth() + 1}月`;
   const todayLabel = `${_now.getMonth() + 1}/${_now.getDate()}`;
 
-  // envelope budget stats
+  // envelope budget stats — explicit envelope selection takes priority over category matching
   const envsWithUsed = envelopes.map(env => ({
     ...env,
-    used: (env.cats || []).reduce((s, catId) => s + (catUsed[catId] || 0), 0),
+    used: (envExplicit[env.id] || 0) + (env.cats || []).reduce((s, catId) => s + (catUsed[catId] || 0), 0),
   }));
   const budgetTotal = envsWithUsed.reduce((s, e) => s + (e.total || 0), 0);
   const budgetUsed = envsWithUsed.reduce((s, e) => s + e.used, 0);
@@ -63,7 +63,9 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
   const dailyLeft = daysLeft > 0 && dailyRemaining > 0 ? Math.round(dailyRemaining / daysLeft) : 0;
   // 今日剩餘：每天可花 − 今天在 daily 信封裡的花費
   const dailyCatIds = new Set(dailyEnvs.flatMap(e => e.cats || []));
-  const todayDailySpent = (recent || []).filter(t => t.amt < 0 && dailyCatIds.has(t.cat))
+  const dailyEnvIds = new Set(dailyEnvs.map(e => e.id));
+  const todayDailySpent = (recent || [])
+    .filter(t => t.amt < 0 && (dailyCatIds.has(t.cat) || dailyEnvIds.has(t.envelope)))
     .reduce((s, t) => s + Math.abs(t.amt), 0);
   const todayRemaining = Math.max(0, dailyLeft - todayDailySpent);
   const todayOver = dailyBudget > 0 && todayDailySpent > dailyLeft;
