@@ -538,6 +538,7 @@ function App() {
   const [depositPot, setDepositPot] = useStateApp(null);
   const [advisorOpen, setAdvisorOpen] = useStateApp(false);
   const [editingTx, setEditingTx] = useStateApp(null);
+  const [historyOpen, setHistoryOpen] = useStateApp(false);
   const [categoriesOpen, setCategoriesOpen] = useStateApp(false);
   const [foxOpen, setFoxOpen] = useStateApp(false);
   const [paletteOpen, setPaletteOpen] = useStateApp(false);
@@ -875,7 +876,7 @@ function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} envelopes={envelopes} catUsed={catUsed} envExplicit={envExplicit} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setTab('stats')} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} onEdit={setEditingTx} showCloseBanner={!monthClosed}/>;
+      case 'home': return <HomeScreen data={liveData} envelopes={envelopes} catUsed={catUsed} envExplicit={envExplicit} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setHistoryOpen(true)} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} onEdit={setEditingTx} showCloseBanner={!monthClosed}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions} envelopes={envelopes}/>;
       case 'diary': return <DiaryScreen transactions={transactions} onAdd={handleAdd}/>;
       case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} palette={tweaks.palette} foxState={foxState} transactions={transactions} envelopes={envelopes} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
@@ -901,6 +902,11 @@ function App() {
       </div>
       <BottomNav current={tab} onSelect={setTab} onAdd={handleAdd} isMobile={true}/>
         <AddModal open={addOpen} onClose={() => setAddOpen(false)} onDone={handleSaved} envelopes={envelopes} preset={addPreset}/>
+        {historyOpen && (
+          <div style={{ position: 'absolute', inset: 0, zIndex: 65, animation: 'slide-up 0.3s ease-out' }}>
+            <HistoryScreen transactions={transactions} onClose={() => setHistoryOpen(false)} onEdit={setEditingTx} onDelete={handleDelete}/>
+          </div>
+        )}
         {editingTx && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
             <AddScreen existing={editingTx} envelopes={envelopes} onClose={() => setEditingTx(null)} onSave={handleUpdateTx}/>
