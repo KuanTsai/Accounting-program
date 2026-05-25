@@ -185,7 +185,70 @@ function AddModal({ open, onClose, onDone, envelopes = [], preset = {} }) {
   );
 }
 
-const APP_VERSION = 'v0.3.1';
+const APP_VERSION = 'v0.3.2';
+
+// ─── iOS install banner ────────────────────────────────
+function IOSInstallBanner() {
+  const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  const isStandalone = window.navigator.standalone === true;
+  const isSafari = /safari/i.test(navigator.userAgent) && !/chrome|crios|fxios/i.test(navigator.userAgent);
+  const [dismissed, setDismissed] = useStateApp(() => {
+    try { return !!localStorage.getItem('iosInstallDismissed'); } catch { return false; }
+  });
+
+  if (!isIOS || isStandalone || !isSafari || dismissed) return null;
+
+  const dismiss = () => {
+    try { localStorage.setItem('iosInstallDismissed', '1'); } catch {}
+    setDismissed(true);
+  };
+
+  return (
+    <div style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0, zIndex: 200,
+      padding: '12px 16px',
+      paddingBottom: 'max(16px, env(safe-area-inset-bottom, 16px))',
+      background: 'rgba(255,246,240,0.97)',
+      backdropFilter: 'blur(16px)',
+      boxShadow: '0 -4px 24px rgba(255,143,171,0.18)',
+      borderTop: '1px solid var(--accent-soft)',
+      animation: 'slide-up 0.35s ease-out',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+        <img src="icons/icon-192.png" width="40" height="40"
+          style={{ borderRadius: 10, flexShrink: 0 }} draggable={false}/>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--ink)', marginBottom: 3 }}>
+            把小桃加到桌面，用起來更像 App ✿
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--ink-soft)', display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+            <span>Safari 底部點</span>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+              width: 22, height: 22, borderRadius: 6,
+              background: '#007AFF', flexShrink: 0,
+            }}>
+              <svg width="12" height="14" viewBox="0 0 12 14" fill="none">
+                <path d="M6 9V1M6 1L3 4M6 1L9 4" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/>
+                <rect x="1" y="6" width="10" height="7" rx="1.5" stroke="#fff" strokeWidth="1.4"/>
+              </svg>
+            </span>
+            <span>→ 加入主畫面</span>
+          </div>
+        </div>
+        <div className="tap" onClick={dismiss} style={{
+          width: 28, height: 28, borderRadius: 14,
+          background: 'var(--ink-faint)', flexShrink: 0,
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}>
+          <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--bg)" strokeWidth="2" strokeLinecap="round">
+            <line x1="1" y1="1" x2="9" y2="9"/><line x1="9" y1="1" x2="1" y2="9"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 // ─── root ──────────────────────────────────────────────
 const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
@@ -971,6 +1034,7 @@ function App() {
         )}
         <Toast show={toast} withDiary={toastDiary} streak={liveData.streak} expGain={toastExpGain} isFirstToday={toastFirstToday} foxFur={foxState.fur} foxAccessory={foxState.accessory}/>
         {levelUpInfo && <LevelUpOverlay info={levelUpInfo} foxState={foxState} onClose={() => { setLevelUpInfo(null); setFoxMoodOverride(null); }}/>}
+        <IOSInstallBanner/>
       </div>
   );
 }
