@@ -227,6 +227,47 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
         </div>
       </div>
 
+      {/* per-envelope remaining quick view */}
+      {useEnvelopeMode && envsWithUsed.length > 0 && (
+        <div style={{ padding: '16px 20px 0' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+            <div className="hand" style={{ fontSize: 18, color: 'var(--ink)' }}>信封餘額</div>
+            <span style={{ fontSize: 11, color: 'var(--ink-faint)', fontFamily: 'Caveat', fontWeight: 600 }}>remaining ♥</span>
+          </div>
+          <div style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
+            {envsWithUsed.map(env => {
+              const remaining = env.total - env.used;
+              const over = remaining < 0;
+              const pct = env.total > 0 ? Math.min(100, Math.round((env.used / env.total) * 100)) : 0;
+              return (
+                <div key={env.id} style={{
+                  flexShrink: 0, minWidth: 100,
+                  background: 'var(--card)', borderRadius: 18,
+                  padding: '10px 12px', boxShadow: 'var(--shadow-sm)',
+                  border: `1px solid ${over ? '#FFD5D5' : '#F5E8E0'}`,
+                }}>
+                  <div style={{ fontSize: 18, marginBottom: 4 }}>{env.emoji}</div>
+                  <div style={{ fontSize: 10, color: 'var(--ink-soft)', fontWeight: 600, marginBottom: 2 }}>{env.label}</div>
+                  <div style={{ fontSize: 15, fontWeight: 700, color: over ? '#D86A8A' : '#3B8A5C' }}>
+                    {over ? `超$${Math.abs(remaining).toLocaleString()}` : `$${remaining.toLocaleString()}`}
+                  </div>
+                  <div style={{ marginTop: 5, background: '#F5EBE4', height: 4, borderRadius: 2, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', width: `${pct}%`,
+                      background: over ? '#D86A8A' : env.color,
+                      borderRadius: 2, transition: 'width 0.4s',
+                    }}/>
+                  </div>
+                  <div style={{ fontSize: 9, color: 'var(--ink-faint)', marginTop: 3 }}>
+                    {over ? '已超支' : `已用 ${pct}%`}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* quick actions */}
       <div style={{ padding: '20px 20px 0' }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>

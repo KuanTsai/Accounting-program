@@ -423,9 +423,13 @@ function EnvelopeCard({ env, onUpdate, onAddCat, onDelete }) {
 
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ fontSize: 14, color: 'var(--ink)', fontWeight: 600 }}>{env.label}</div>
-          <div style={{ fontSize: 11, color: over ? '#D86A8A' : 'var(--ink-soft)', marginTop: 1 }}>
-            已用 ${env.used.toLocaleString()} / 預算 ${env.total.toLocaleString()}
-            {over && <span> · 超支 ${(env.used - env.total).toLocaleString()}</span>}
+          <div style={{ fontSize: 13, color: over ? '#D86A8A' : '#3B8A5C', fontWeight: 700, marginTop: 1 }}>
+            {over
+              ? `超支 $${(env.used - env.total).toLocaleString()}`
+              : `還剩 $${(env.total - env.used).toLocaleString()} 可花`}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--ink-faint)', marginTop: 1 }}>
+            已用 ${env.used.toLocaleString()} ／ 預算 ${env.total.toLocaleString()}
           </div>
         </div>
 

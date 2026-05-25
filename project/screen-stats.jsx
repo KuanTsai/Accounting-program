@@ -181,8 +181,12 @@ function StatsScreen({ data, transactions = [], envelopes = [] }) {
                       <div style={{ fontSize: 11, color: 'var(--ink-soft)' }}>預算 ${env.total.toLocaleString()}</div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontSize: 15, fontWeight: 700, color: over ? '#E05A5A' : 'var(--ink)', fontVariantNumeric: 'tabular-nums' }}>${used.toLocaleString()}</div>
-                      <div style={{ fontSize: 10, color: over ? '#E05A5A' : 'var(--ink-soft)' }}>{over ? '超支！' : `${pct}%`}</div>
+                      <div style={{ fontSize: 15, fontWeight: 700, color: over ? '#E05A5A' : '#3B8A5C', fontVariantNumeric: 'tabular-nums' }}>
+                        {over ? `超 $${(used - env.total).toLocaleString()}` : `剩 $${(env.total - used).toLocaleString()}`}
+                      </div>
+                      <div style={{ fontSize: 10, color: over ? '#E05A5A' : 'var(--ink-soft)' }}>
+                        {over ? '超支！' : `已用 $${used.toLocaleString()}`}
+                      </div>
                     </div>
                   </div>
                   <div style={{ background: '#F5EBE4', height: 6, borderRadius: 3, overflow: 'hidden' }}>
