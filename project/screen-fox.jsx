@@ -27,6 +27,27 @@ function FoxScreen({ foxState, setFoxState, onClose, onExpGain, transactions = [
   const [tab, setTab] = useStateFox('customize');
   const [floatNote, setFloatNote] = useStateFox(null);
 
+  // 陪伴天數：從第一次相遇日 (joinedAt) 算起，含當天
+  // 舊用戶沒有 joinedAt 時，用最早一筆交易日期當起點
+  const earliestTxTime = (() => {
+    const times = transactions
+      .filter(t => t.createdAt)
+      .map(t => (t.createdAt.toDate ? t.createdAt.toDate() : new Date(t.createdAt)).getTime());
+    return times.length ? Math.min(...times) : null;
+  })();
+  const startTime = foxState.joinedAt || earliestTxTime;
+  const daysWith = startTime
+    ? Math.max(1, Math.floor((Date.now() - startTime) / 86400000) + 1)
+    : (foxState.days || 1);
+
+  // 回填 joinedAt，讓天數之後計算穩定（即使日後刪除交易）
+  useEffectFox(() => {
+    if (!foxState.joinedAt && startTime) {
+      setFoxState(s => ({ ...s, joinedAt: startTime }));
+      saveProfile({ joinedAt: startTime });
+    }
+  }, []);
+
   const saveProfile = (updates) => {
     const u = window.auth.currentUser;
     if (!u) return;
@@ -234,7 +255,7 @@ function FoxScreen({ foxState, setFoxState, onClose, onExpGain, transactions = [
                   fontSize: 11, color: 'var(--accent)', fontWeight: 700,
                 }}>Lv. {foxState.level}</span>
                 <span style={{ fontSize: 11, color: 'var(--ink-soft)' }}>
-                  陪伴你 {foxState.days} 天
+                  陪伴你 {daysWith} 天
                 </span>
               </div>
 
