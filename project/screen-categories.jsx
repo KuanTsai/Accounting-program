@@ -46,7 +46,7 @@ function CategoryScreen({ onClose, transactions = [] }) {
       } catch(e) {}
     }
     // Sync global CATEGORIES in-place so every other screen sees the update
-    const updated = cats.filter(c => c.on !== false).map(({ id, label, color, bg, fav, icon }) => ({ id, label, color, bg, fav: !!fav, ...(icon ? { icon } : {}) }));
+    const updated = cats.filter(c => c.on !== false).map(({ id, label, color, bg, fav, icon, type }) => ({ id, label, color, bg, fav: !!fav, ...(icon ? { icon } : {}), ...(type ? { type } : {}) }));
     CATEGORIES.splice(0, CATEGORIES.length, ...updated);
     setSaving(false);
     onClose();

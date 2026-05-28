@@ -623,7 +623,7 @@ function App() {
     window.db.collection('users').doc(user.uid).collection('settings').doc('categories').get()
       .then(doc => {
         if (doc.exists && doc.data().cats && doc.data().cats.length > 0) {
-          const updated = doc.data().cats.filter(c => c.on !== false).map(({ id, label, color, bg, fav, icon }) => ({ id, label, color, bg, fav: !!fav, ...(icon ? { icon } : {}) }));
+          const updated = doc.data().cats.filter(c => c.on !== false).map(({ id, label, color, bg, fav, icon, type }) => ({ id, label, color, bg, fav: !!fav, ...(icon ? { icon } : {}), ...(type ? { type } : {}) }));
           CATEGORIES.splice(0, CATEGORIES.length, ...updated);
         }
       })

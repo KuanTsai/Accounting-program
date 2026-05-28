@@ -7,8 +7,18 @@ function AddScreen({ onClose, onSave, envelopes = [], preset = {}, existing = nu
   const [amount, setAmount] = useStateAdd(() => existing ? String(Math.abs(existing.amt)) : '0');
   const [pendingOp, setPendingOp] = useStateAdd(null);
   const [firstVal, setFirstVal] = useStateAdd(null);
-  const [cat, setCat] = useStateAdd(() => existing?.cat || preset.cat || 'food');
-  const [type, setType] = useStateAdd(() => existing ? (existing.amt > 0 ? 'income' : 'expense') : (preset.type || 'expense'));
+  const [cat, setCat] = useStateAdd(() => {
+    if (existing?.cat) return existing.cat;
+    if (preset.cat) return preset.cat;
+    return (CATEGORIES.find(c => c.fav) || {}).id || 'food';
+  });
+  const [type, setType] = useStateAdd(() => {
+    if (existing) return existing.amt > 0 ? 'income' : 'expense';
+    if (preset.type) return preset.type;
+    const firstFav = CATEGORIES.find(c => c.fav);
+    if (firstFav && (firstFav.type === 'income' || firstFav.id === 'salary')) return 'income';
+    return 'expense';
+  });
   const [note, setNote] = useStateAdd(() => existing?.note || '');
   const [mood, setMood] = useStateAdd(() => existing?.mood || null);
   const [diaryOpen, setDiaryOpen] = useStateAdd(() => !!(existing?.diary) || preset.diaryOpen || false);
