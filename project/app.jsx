@@ -52,7 +52,7 @@ function BottomNav({ current, onSelect, onAdd, isMobile }) {
           if (t.isAdd) {
             return (
               <div key="add" style={{ flex: 1, display: 'flex', justifyContent: 'center', position: 'relative' }}>
-                <div className="tap" onClick={onAdd} style={{
+                <div className="tap" onClick={() => onAdd()} style={{
                   width: 58, height: 58, borderRadius: 29,
                   background: 'linear-gradient(135deg, var(--accent) 0%, var(--secondary) 100%)',
                   display: 'flex', alignItems: 'center', justifyContent: 'center',

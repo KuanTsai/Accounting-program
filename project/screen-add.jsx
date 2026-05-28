@@ -14,7 +14,7 @@ function AddScreen({ onClose, onSave, envelopes = [], preset = {}, existing = nu
   });
   const [type, setType] = useStateAdd(() => {
     if (existing) return existing.amt > 0 ? 'income' : 'expense';
-    if (preset.type) return preset.type;
+    if (preset.type === 'income' || preset.type === 'expense') return preset.type;
     const firstFav = CATEGORIES.find(c => c.fav);
     if (firstFav && (firstFav.type === 'income' || firstFav.id === 'salary')) return 'income';
     return 'expense';
