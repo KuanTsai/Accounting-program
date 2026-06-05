@@ -53,20 +53,23 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
   const budgetOver = budgetTotal > 0 && budgetUsed > budgetTotal;
   const daysLeft = (() => {
     const last = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate();
-    return Math.max(1, last - _now.getDate());
+    return Math.max(1, last - _now.getDate() + 1);
   })();
   // 每日可花：只算有 daily: true 的信封
   const dailyEnvs = envsWithUsed.filter(e => e.daily);
   const dailyBudget = dailyEnvs.reduce((s, e) => s + (e.total || 0), 0);
   const dailyUsed = dailyEnvs.reduce((s, e) => s + e.used, 0);
-  const dailyRemaining = Math.max(0, dailyBudget - dailyUsed);
-  const dailyLeft = daysLeft > 0 && dailyRemaining > 0 ? Math.round(dailyRemaining / daysLeft) : 0;
   // 今日剩餘：每天可花 − 今天在 daily 信封裡的花費
   const dailyCatIds = new Set(dailyEnvs.flatMap(e => e.cats || []));
   const dailyEnvIds = new Set(dailyEnvs.map(e => e.id));
   const todayDailySpent = (recent || [])
     .filter(t => t.amt < 0 && (dailyCatIds.has(t.cat) || dailyEnvIds.has(t.envelope)))
     .reduce((s, t) => s + Math.abs(t.amt), 0);
+  // 今日的每日可花 = (預算 − 今日之前已花) / 含今天的剩餘天數
+  // 這樣同一天內 dailyLeft 不會因今天花錢而改變，今日剩餘也不會雙重扣除
+  const dailyUsedBeforeToday = Math.max(0, dailyUsed - todayDailySpent);
+  const dailyBudgetForToday = Math.max(0, dailyBudget - dailyUsedBeforeToday);
+  const dailyLeft = daysLeft > 0 ? Math.round(dailyBudgetForToday / daysLeft) : 0;
   const todayRemaining = Math.max(0, dailyLeft - todayDailySpent);
   const todayOver = dailyBudget > 0 && todayDailySpent > dailyLeft;
   const useEnvelopeMode = budgetTotal > 0;

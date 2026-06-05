@@ -18,7 +18,7 @@ function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox,
   const totalUsed = liveData.expense || 0;
   const budgetPct = budgetTotal > 0 ? (totalUsed / budgetTotal) * 100 : 0;
   const remaining = Math.max(0, budgetTotal - totalUsed);
-  const daysLeft = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate();
+  const daysLeft = Math.max(1, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate() + 1);
   const dailyLeft = daysLeft > 0 && remaining > 0 ? Math.round(remaining / daysLeft) : 0;
   const topEnvelopes = envelopes.slice(0, 4).map(env => ({
     ...env,
