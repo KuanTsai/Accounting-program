@@ -26,18 +26,19 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
       });
   }, []);
 
-  // Compute real used amounts for this month
+  // Compute real used amounts for this month（淨花費：支出 − 收入，收入視為信封加值）
   const envExplicit = {};
   const catImplicit = {};
   transactions.filter(tx => {
-    if (!tx.createdAt || tx.amt >= 0) return false;
+    if (!tx.createdAt) return false;
     const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
     return d.getFullYear() === closeYear && d.getMonth() === closeMonth;
   }).forEach(tx => {
+    const delta = -tx.amt; // 支出→正；收入→負（加值）
     if (tx.envelope) {
-      envExplicit[tx.envelope] = (envExplicit[tx.envelope] || 0) + Math.abs(tx.amt);
+      envExplicit[tx.envelope] = (envExplicit[tx.envelope] || 0) + delta;
     } else {
-      catImplicit[tx.cat] = (catImplicit[tx.cat] || 0) + Math.abs(tx.amt);
+      catImplicit[tx.cat] = (catImplicit[tx.cat] || 0) + delta;
     }
   });
 

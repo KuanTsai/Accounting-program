@@ -12,19 +12,25 @@ function StatsScreen({ data, transactions = [], envelopes = [] }) {
 
   const total = data.expense;
 
-  // Category breakdown (all transactions, for the pie chart)
+  // Category breakdown (expenses only, for the pie chart)
   const catTotals = {};
   monthlyExpense.forEach(tx => {
     catTotals[tx.cat] = (catTotals[tx.cat] || 0) + Math.abs(tx.amt);
   });
-  // Envelope usage: explicit assignment takes priority over category matching
+  // Envelope usage: 淨花費（支出 − 收入），收入指定到信封 / 屬於信封分類視為加值
+  const monthlyAll = transactions.filter(tx => {
+    if (!tx.createdAt) return false;
+    const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
   const envExplicit = {};
   const catImplicit = {};
-  monthlyExpense.forEach(tx => {
+  monthlyAll.forEach(tx => {
+    const delta = -tx.amt; // 支出→正；收入→負（加值）
     if (tx.envelope) {
-      envExplicit[tx.envelope] = (envExplicit[tx.envelope] || 0) + Math.abs(tx.amt);
+      envExplicit[tx.envelope] = (envExplicit[tx.envelope] || 0) + delta;
     } else {
-      catImplicit[tx.cat] = (catImplicit[tx.cat] || 0) + Math.abs(tx.amt);
+      catImplicit[tx.cat] = (catImplicit[tx.cat] || 0) + delta;
     }
   });
   const breakdown = Object.entries(catTotals)
@@ -170,7 +176,7 @@ function StatsScreen({ data, transactions = [], envelopes = [] }) {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {envelopes.map(env => {
               const used = (envExplicit[env.id] || 0) + (env.cats || []).reduce((s, cid) => s + (catImplicit[cid] || 0), 0);
-              const pct = env.total > 0 ? Math.min(100, Math.round((used / env.total) * 100)) : 0;
+              const pct = env.total > 0 ? Math.max(0, Math.min(100, Math.round((used / env.total) * 100))) : 0;
               const over = used > env.total;
               return (
                 <div key={env.id} style={{ background: 'var(--card)', borderRadius: 18, padding: '12px 14px', boxShadow: 'var(--shadow-sm)' }}>

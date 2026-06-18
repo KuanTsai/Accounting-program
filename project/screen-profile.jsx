@@ -6,23 +6,28 @@ function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox,
   const now = new Date();
 
   // ── budget stats ──────────────────────────────────────
+  // 淨花費（支出 − 收入），收入指定到信封 / 屬於信封分類視為加值
   const budgetTotal = envelopes.reduce((s, env) => s + (env.total || 0), 0);
   const catUsed = {};
+  const envExplicit = {};
   transactions.forEach(tx => {
-    if (!tx.createdAt || tx.amt >= 0) return;
+    if (!tx.createdAt) return;
     const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
     if (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()) {
-      catUsed[tx.cat] = (catUsed[tx.cat] || 0) + Math.abs(tx.amt);
+      const delta = -tx.amt; // 支出→正；收入→負（加值）
+      if (tx.envelope) envExplicit[tx.envelope] = (envExplicit[tx.envelope] || 0) + delta;
+      else catUsed[tx.cat] = (catUsed[tx.cat] || 0) + delta;
     }
   });
-  const totalUsed = liveData.expense || 0;
-  const budgetPct = budgetTotal > 0 ? (totalUsed / budgetTotal) * 100 : 0;
+  const envUsed = (env) => (envExplicit[env.id] || 0) + (env.cats || []).reduce((s, cid) => s + (catUsed[cid] || 0), 0);
+  const totalUsed = envelopes.reduce((s, env) => s + envUsed(env), 0);
+  const budgetPct = budgetTotal > 0 ? Math.max(0, (totalUsed / budgetTotal) * 100) : 0;
   const remaining = Math.max(0, budgetTotal - totalUsed);
   const daysLeft = Math.max(1, new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate() - now.getDate() + 1);
   const dailyLeft = daysLeft > 0 && remaining > 0 ? Math.round(remaining / daysLeft) : 0;
   const topEnvelopes = envelopes.slice(0, 4).map(env => ({
     ...env,
-    used: (env.cats || []).reduce((s, cid) => s + (catUsed[cid] || 0), 0),
+    used: envUsed(env),
   }));
 
   // ── vault totals ──────────────────────────────────────
@@ -185,7 +190,7 @@ function ProfileScreen({ onOpenBudget, onOpenVault, onOpenCategories, onOpenFox,
             </div>
 
             {topEnvelopes.map((env, i) => {
-              const pct = env.total > 0 ? (env.used / env.total) * 100 : 0;
+              const pct = env.total > 0 ? Math.max(0, (env.used / env.total) * 100) : 0;
               const over = pct > 100;
               const warn = pct > 85;
               return (

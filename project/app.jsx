@@ -847,13 +847,15 @@ function App() {
   });
   const income = monthlyTxs.filter(t => t.amt > 0).reduce((s, t) => s + t.amt, 0);
   const expense = Math.abs(monthlyTxs.filter(t => t.amt < 0).reduce((s, t) => s + t.amt, 0));
-  const catUsed = {};    // cat → amount，給沒有明確選信封的交易用
-  const envExplicit = {}; // envId → amount，給有明確選信封的交易用
-  monthlyTxs.filter(t => t.amt < 0).forEach(t => {
+  const catUsed = {};    // cat → 淨花費（支出 − 收入），給沒有明確選信封的交易用
+  const envExplicit = {}; // envId → 淨花費（支出 − 收入），給有明確選信封的交易用
+  // 收入若指定到信封 / 屬於信封分類，視為「為信封加值」，抵減已用金額
+  monthlyTxs.forEach(t => {
+    const delta = -t.amt; // 支出(amt<0)→正的已用；收入(amt>0)→負的已用（加值）
     if (t.envelope) {
-      envExplicit[t.envelope] = (envExplicit[t.envelope] || 0) + Math.abs(t.amt);
+      envExplicit[t.envelope] = (envExplicit[t.envelope] || 0) + delta;
     } else {
-      catUsed[t.cat] = (catUsed[t.cat] || 0) + Math.abs(t.amt);
+      catUsed[t.cat] = (catUsed[t.cat] || 0) + delta;
     }
   });
   const todayTxs = transactions.filter(tx => {

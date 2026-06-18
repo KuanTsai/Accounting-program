@@ -38,14 +38,21 @@ function BudgetScreen({ onClose, onAdvisor, foxName = '小桃', transactions = [
   }, []);
 
   // Calculate real used amounts from this month's transactions
+  // 淨花費（支出 − 收入）；收入指定到信封 / 屬於信封分類視為加值，抵減已用
   const now = new Date();
-  const catUsed = {};
+  const catUsed = {};     // cat → 淨花費（給沒明確選信封的交易）
+  const envExplicit = {}; // envId → 淨花費（給有明確選信封的交易）
   transactions.filter(tx => {
-    if (!tx.createdAt || tx.amt >= 0) return false;
+    if (!tx.createdAt) return false;
     const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
     return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
   }).forEach(tx => {
-    catUsed[tx.cat] = (catUsed[tx.cat] || 0) + Math.abs(tx.amt);
+    const delta = -tx.amt; // 支出→正；收入→負（加值）
+    if (tx.envelope) {
+      envExplicit[tx.envelope] = (envExplicit[tx.envelope] || 0) + delta;
+    } else {
+      catUsed[tx.cat] = (catUsed[tx.cat] || 0) + delta;
+    }
   });
 
   if (!envelopes) return (
@@ -58,7 +65,7 @@ function BudgetScreen({ onClose, onAdvisor, foxName = '小桃', transactions = [
 
   const liveEnvelopes = envelopes.map(env => ({
     ...env,
-    used: env.cats.reduce((s, catId) => s + (catUsed[catId] || 0), 0),
+    used: (envExplicit[env.id] || 0) + env.cats.reduce((s, catId) => s + (catUsed[catId] || 0), 0),
   }));
 
   const allocated = liveEnvelopes.reduce((s, e) => s + e.total, 0);
@@ -190,7 +197,7 @@ function BudgetScreen({ onClose, onAdvisor, foxName = '小桃', transactions = [
             {/* progress bar with fox */}
             <div style={{ marginTop: 14, background: 'rgba(255,255,255,0.7)', height: 16, borderRadius: 8, padding: 2, position: 'relative' }}>
               <div style={{
-                height: '100%', width: `${Math.min(pct, 100)}%`, borderRadius: 6,
+                height: '100%', width: `${Math.max(0, Math.min(pct, 100))}%`, borderRadius: 6,
                 background: overWarn
                   ? 'linear-gradient(90deg, #FFB97A 0%, #F08A8A 100%)'
                   : 'linear-gradient(90deg, var(--accent) 0%, var(--secondary) 100%)',
@@ -385,7 +392,7 @@ function EnvelopeCard({ env, onUpdate, onAddCat, onDelete }) {
   const [amtEditing, setAmtEditing] = useStateBudget(false);
   const [amtRaw, setAmtRaw] = useStateBudget('');
 
-  const pct = env.total > 0 ? (env.used / env.total) * 100 : 0;
+  const pct = env.total > 0 ? Math.max(0, (env.used / env.total) * 100) : 0;
   const over = pct > 100;
 
   const startAmtEdit = () => { setAmtRaw(String(env.total)); setAmtEditing(true); };

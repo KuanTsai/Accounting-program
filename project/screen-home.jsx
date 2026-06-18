@@ -49,7 +49,7 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
   const budgetTotal = envsWithUsed.reduce((s, e) => s + (e.total || 0), 0);
   const budgetUsed = envsWithUsed.reduce((s, e) => s + e.used, 0);
   const budgetRemaining = Math.max(0, budgetTotal - budgetUsed);
-  const budgetPct = budgetTotal > 0 ? Math.min((budgetUsed / budgetTotal) * 100, 100) : 0;
+  const budgetPct = budgetTotal > 0 ? Math.max(0, Math.min((budgetUsed / budgetTotal) * 100, 100)) : 0;
   const budgetOver = budgetTotal > 0 && budgetUsed > budgetTotal;
   const daysLeft = (() => {
     const last = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate();
@@ -276,7 +276,7 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
             {envsWithUsed.map(env => {
               const remaining = env.total - env.used;
               const over = remaining < 0;
-              const pct = env.total > 0 ? Math.min(100, Math.round((env.used / env.total) * 100)) : 0;
+              const pct = env.total > 0 ? Math.max(0, Math.min(100, Math.round((env.used / env.total) * 100))) : 0;
               return (
                 <div key={env.id} style={{
                   flexShrink: 0, minWidth: 100,
