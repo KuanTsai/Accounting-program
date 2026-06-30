@@ -669,6 +669,47 @@ function App() {
       .onSnapshot(doc => setMonthClosed(doc.exists));
   }, [user]);
 
+  // Apply any past month's pending rollover once that month has actually ended.
+  // (A close can be run up to 5 days before month-end, so its rollover into next
+  // month's budget must wait until "next month" really starts — otherwise it would
+  // inflate the closing month's remaining budget for the rest of that month.)
+  useEffectApp(() => {
+    if (!user) return;
+    if (!window.db.runTransaction || !firebase.firestore.FieldPath) return; // not supported by this Firestore client (e.g. test mock)
+    try {
+      const n = new Date();
+      const currentKey = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
+      const closesRef = window.db.collection('users').doc(user.uid).collection('closes');
+      const budgetRef = window.db.collection('users').doc(user.uid).collection('settings').doc('budget');
+      closesRef.where(firebase.firestore.FieldPath.documentId(), '<', currentKey).get()
+        .then(snap => {
+          // rolloverApplied === false (written explicitly by the new close flow) means it's pending.
+          // A doc with the field missing entirely predates this fix — its rollover was already
+          // bumped into env.total immediately at close time by the old code, so skip it here
+          // to avoid double-applying it.
+          const pending = snap.docs.filter(d => d.data().rolloverApplied === false && (d.data().items || []).some(it => it.dest === 'rollover' && it.leftover > 0));
+          return pending.reduce((chain, doc) => chain.then(() =>
+            window.db.runTransaction(async (tx) => {
+              const closeSnap = await tx.get(doc.ref);
+              if (!closeSnap.exists || closeSnap.data().rolloverApplied !== false) return;
+              const rolloverItems = (closeSnap.data().items || []).filter(it => it.dest === 'rollover' && it.leftover > 0);
+              if (rolloverItems.length === 0) { tx.update(doc.ref, { rolloverApplied: true }); return; }
+              const budgetSnap = await tx.get(budgetRef);
+              if (!budgetSnap.exists) { tx.update(doc.ref, { rolloverApplied: true }); return; }
+              const envs = (budgetSnap.data().envelopes || []).map(env => {
+                const match = rolloverItems.find(it => it.envId === env.id);
+                return match ? { ...env, total: (env.total || 0) + match.leftover } : env;
+              });
+              const newTotal = envs.reduce((s, e) => s + (e.total || 0), 0);
+              tx.update(budgetRef, { envelopes: envs, total: newTotal });
+              tx.update(doc.ref, { rolloverApplied: true });
+            })
+          ), Promise.resolve());
+        })
+        .catch(e => console.error('Apply pending rollover failed', e));
+    } catch (e) { console.error('Apply pending rollover failed', e); }
+  }, [user]);
+
   const handleAdd = (preset = {}) => { setAddPreset(preset); setAddOpen(true); };
   const handleLogout = async () => {
     try {

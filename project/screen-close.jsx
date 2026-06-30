@@ -103,26 +103,17 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
           saved: firebase.firestore.FieldValue.increment(it.leftover),
         });
       }
-      // Rollover — add leftover back to each envelope's budget total
-      const rolloverItems = items.filter(it => (picks[it.envId] || 'rollover') === 'rollover' && it.leftover > 0);
-      if (rolloverItems.length > 0) {
-        const budgetRef = window.db.collection('users').doc(uid).collection('settings').doc('budget');
-        const budgetDoc = await budgetRef.get();
-        if (budgetDoc.exists) {
-          const envs = (budgetDoc.data().envelopes || []).map(env => {
-            const match = rolloverItems.find(it => it.envId === env.id);
-            return match ? { ...env, total: (env.total || 0) + match.leftover } : env;
-          });
-          const newTotal = envs.reduce((s, e) => s + (e.total || 0), 0);
-          await budgetRef.update({ envelopes: envs, total: newTotal });
-        }
-      }
+      // Rollover — leftover is recorded here but NOT added to the budget total yet.
+      // The close can happen before this month has actually ended (banner shows up to 5 days early),
+      // so bumping env.total immediately would inflate this month's "remaining" for the rest of today.
+      // App startup logic (see app.jsx) applies it to env.total once the next calendar month actually begins.
       // Record close
       const closeKey = `${closeYear}-${String(closeMonth + 1).padStart(2, '0')}`;
       await window.db.collection('users').doc(uid).collection('closes').doc(closeKey).set({
         closedAt: firebase.firestore.FieldValue.serverTimestamp(),
         totalSaved, totalRollover, month: closeMonthLabel,
         items: items.map(it => ({ envId: it.envId, leftover: it.leftover, dest: picks[it.envId] || 'rollover' })),
+        rolloverApplied: false,
       });
       setConfirmed(true);
     } catch (e) {
