@@ -31,10 +31,15 @@ function StatsScreen({ data, transactions = [], envelopes = [] }) {
   const total       = monthlyExpense.reduce((s, tx) => s + Math.abs(tx.amt), 0);
   const totalIncome = monthlyIncome.reduce((s, tx) => s + tx.amt, 0);
 
-  // Envelope usage for selected month
+  // Envelope usage — always current calendar month regardless of month selector
+  // (信封分析 is a live budget tracker, not a historical view)
   const envExplicit = {};
   const catImplicit = {};
-  monthlyAll.forEach(tx => {
+  transactions.filter(tx => {
+    if (!tx.createdAt) return false;
+    const d = tx.createdAt.toDate ? tx.createdAt.toDate() : new Date(tx.createdAt);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  }).forEach(tx => {
     const delta = -tx.amt;
     if (tx.envelope) envExplicit[tx.envelope] = (envExplicit[tx.envelope] || 0) + delta;
     else catImplicit[tx.cat] = (catImplicit[tx.cat] || 0) + delta;
@@ -195,7 +200,10 @@ function StatsScreen({ data, transactions = [], envelopes = [] }) {
       {/* envelope analysis */}
       {envelopes.length > 0 && (
         <div style={{ padding: '18px 20px 0' }}>
-          <div className="hand" style={{ fontSize: 20, color: 'var(--ink)', marginBottom: 10 }}>信封分析</div>
+          <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, marginBottom: 10 }}>
+            <div className="hand" style={{ fontSize: 20, color: 'var(--ink)' }}>信封分析</div>
+            <span style={{ fontSize: 11, color: 'var(--ink-soft)' }}>本月即時</span>
+          </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {envelopes.map(env => {
               const used = (envExplicit[env.id] || 0) + (env.cats || []).reduce((s, cid) => s + (catImplicit[cid] || 0), 0);
