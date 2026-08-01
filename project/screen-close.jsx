@@ -2,11 +2,12 @@
 
 const { useState: useStateClose, useEffect: useEffectClose } = React;
 
-function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = [], foxFur = 'orange', foxAccessory = 'none' }) {
+function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = [], foxFur = 'orange', foxAccessory = 'none', targetYear, targetMonth }) {
   const now = new Date();
-  const closeYear = now.getFullYear();
-  const closeMonth = now.getMonth();
+  const closeYear  = targetYear  != null ? targetYear  : now.getFullYear();
+  const closeMonth = targetMonth != null ? targetMonth : now.getMonth();
   const closeMonthLabel = `${closeMonth + 1}月`;
+  const isPastClose = closeYear < now.getFullYear() || (closeYear === now.getFullYear() && closeMonth < now.getMonth());
 
   const [envelopes, setEnvelopes] = useStateClose([]);
   const [loadingBudget, setLoadingBudget] = useStateClose(true);
@@ -103,17 +104,27 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
           saved: firebase.firestore.FieldValue.increment(it.leftover),
         });
       }
-      // Rollover — leftover is recorded here but NOT added to the budget total yet.
-      // The close can happen before this month has actually ended (banner shows up to 5 days early),
-      // so bumping env.total immediately would inflate this month's "remaining" for the rest of today.
-      // App startup logic (see app.jsx) applies it to env.total once the next calendar month actually begins.
-      // Record close
+      // Rollover handling: depends on whether this is a past-month (retroactive) close or current month.
+      // Past month → month already ended → apply rollover to env.total right now (safe, no inflation risk).
+      // Current month → month still in progress → defer; app.jsx applies rollover once month actually ends.
+      const rolloverItems = items.filter(it => (picks[it.envId] || 'rollover') === 'rollover' && it.leftover > 0);
+      if (isPastClose && rolloverItems.length > 0) {
+        const budgetRef = window.db.collection('users').doc(uid).collection('settings').doc('budget');
+        const budgetDoc = await budgetRef.get();
+        if (budgetDoc.exists) {
+          const envs = (budgetDoc.data().envelopes || []).map(env => {
+            const match = rolloverItems.find(it => it.envId === env.id);
+            return match ? { ...env, total: (env.total || 0) + match.leftover } : env;
+          });
+          await budgetRef.update({ envelopes: envs, total: envs.reduce((s, e) => s + (e.total || 0), 0) });
+        }
+      }
       const closeKey = `${closeYear}-${String(closeMonth + 1).padStart(2, '0')}`;
       await window.db.collection('users').doc(uid).collection('closes').doc(closeKey).set({
         closedAt: firebase.firestore.FieldValue.serverTimestamp(),
         totalSaved, totalRollover, month: closeMonthLabel,
         items: items.map(it => ({ envId: it.envId, leftover: it.leftover, dest: picks[it.envId] || 'rollover' })),
-        rolloverApplied: false,
+        rolloverApplied: isPastClose,
       });
       setConfirmed(true);
     } catch (e) {
@@ -145,7 +156,7 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
           <div className="tap" onClick={onClose} style={{ width: 36, height: 36, borderRadius: 12, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-sm)' }}>
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </div>
-          <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>{closeMonthLabel}結算</div>
+          <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>{isPastClose ? '補' : ''}{closeMonthLabel}結算</div>
         </div>
         <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 30px', textAlign: 'center', gap: 16 }}>
           <Fox mood="neutral" size={80} fur={foxFur} accessory={foxAccessory}/>
@@ -170,7 +181,7 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
             <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
           </svg>
         </div>
-        <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>{closeMonthLabel}結算</div>
+        <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>{isPastClose ? '補' : ''}{closeMonthLabel}結算</div>
         <div style={{ width: 36 }}/>
       </div>
 

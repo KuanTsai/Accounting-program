@@ -585,6 +585,8 @@ function App() {
   const [goalPots, setGoalPots] = useStateApp([]);
   const [autoPots, setAutoPots] = useStateApp([]);
   const [monthClosed, setMonthClosed] = useStateApp(false);
+  const [prevMonthClosed, setPrevMonthClosed] = useStateApp(true);
+  const [closeTarget, setCloseTarget] = useStateApp(null); // null = this month, {year,month} = retroactive
   const [envelopes, setEnvelopes] = useStateApp([]);
 
   // apply palette
@@ -660,13 +662,18 @@ function App() {
       });
   }, [user]);
 
-  // Track whether current month is already closed
+  // Track whether current month and previous month are closed
   useEffectApp(() => {
-    if (!user) { setMonthClosed(false); return; }
+    if (!user) { setMonthClosed(false); setPrevMonthClosed(true); return; }
     const n = new Date();
     const closeKey = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`;
-    return window.db.collection('users').doc(user.uid).collection('closes').doc(closeKey)
+    const prev = new Date(n.getFullYear(), n.getMonth() - 1, 1);
+    const prevKey = `${prev.getFullYear()}-${String(prev.getMonth() + 1).padStart(2, '0')}`;
+    const unsub1 = window.db.collection('users').doc(user.uid).collection('closes').doc(closeKey)
       .onSnapshot(doc => setMonthClosed(doc.exists));
+    const unsub2 = window.db.collection('users').doc(user.uid).collection('closes').doc(prevKey)
+      .onSnapshot(doc => setPrevMonthClosed(doc.exists));
+    return () => { unsub1(); unsub2(); };
   }, [user]);
 
   // Apply any past month's pending rollover once that month has actually ended.
@@ -919,7 +926,7 @@ function App() {
 
   const renderScreen = () => {
     switch (tab) {
-      case 'home': return <HomeScreen data={liveData} envelopes={envelopes} catUsed={catUsed} envExplicit={envExplicit} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setHistoryOpen(true)} onOpenClose={() => setCloseOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} onEdit={setEditingTx} showCloseBanner={!monthClosed}/>;
+      case 'home': return <HomeScreen data={liveData} envelopes={envelopes} catUsed={catUsed} envExplicit={envExplicit} foxMood={foxMood} onAdd={handleAdd} onOpenTx={() => setHistoryOpen(true)} onOpenClose={() => { setCloseTarget(null); setCloseOpen(true); }} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} onDelete={handleDelete} onEdit={setEditingTx} showCloseBanner={!monthClosed} prevMonthClosed={prevMonthClosed} onOpenPrevClose={() => { const p = new Date(); const prev = new Date(p.getFullYear(), p.getMonth() - 1, 1); setCloseTarget({ year: prev.getFullYear(), month: prev.getMonth() }); setCloseOpen(true); }}/>;
       case 'stats': return <StatsScreen data={liveData} transactions={transactions} envelopes={envelopes}/>;
       case 'diary': return <DiaryScreen transactions={transactions} onAdd={handleAdd}/>;
       case 'profile': return <ProfileScreen onOpenBudget={() => setBudgetOpen(true)} onOpenVault={() => setVaultOpen(true)} onOpenCategories={() => setCategoriesOpen(true)} onOpenFox={() => setFoxOpen(true)} onOpenPalette={() => setPaletteOpen(true)} onOpenSettings={() => setSettingsOpen(true)} palette={tweaks.palette} foxState={foxState} transactions={transactions} envelopes={envelopes} goalPots={goalPots} autoPots={autoPots} liveData={liveData}/>;
@@ -973,7 +980,7 @@ function App() {
               onWithdraw={(pot) => setWithdrawPot(pot)}
               onDeposit={(pot) => setDepositPot(pot)}
               onEditGoal={(pot) => setEditingGoal(pot)}
-              onOpenClose={() => { setVaultOpen(false); setCloseOpen(true); }}
+              onOpenClose={() => { setVaultOpen(false); setCloseTarget(null); setCloseOpen(true); }}
               onImport={handleImportBalances}
               goalPots={goalPots}
               autoPots={autoPots}
@@ -1062,12 +1069,14 @@ function App() {
         {closeOpen && (
           <div style={{ position: 'absolute', inset: 0, zIndex: 70, animation: 'slide-up 0.3s ease-out' }}>
             <MonthlyCloseScreen
-              onClose={() => setCloseOpen(false)}
-              onConfirm={() => setCloseOpen(false)}
+              onClose={() => { setCloseOpen(false); setCloseTarget(null); }}
+              onConfirm={() => { setCloseOpen(false); setCloseTarget(null); }}
               transactions={transactions}
               goalPots={goalPots}
               foxFur={foxState.fur}
               foxAccessory={foxState.accessory}
+              targetYear={closeTarget?.year}
+              targetMonth={closeTarget?.month}
             />
           </div>
         )}

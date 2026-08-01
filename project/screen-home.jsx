@@ -30,7 +30,7 @@ function ScreenHeader({ title, subtitle, right, decoration }) {
 // ─────────────────────────────────────────────────────────────
 // HOME screen — balance + fox + recent entries
 // ─────────────────────────────────────────────────────────────
-function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onEdit, onOpenPalette, onOpenSettings, showCloseBanner = true, envelopes = [], catUsed = {}, envExplicit = {} }) {
+function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, onDelete, onEdit, onOpenPalette, onOpenSettings, showCloseBanner = true, prevMonthClosed = true, onOpenPrevClose, envelopes = [], catUsed = {}, envExplicit = {} }) {
   const isNearMonthEnd = (() => {
     const d = new Date();
     const lastDay = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate();
@@ -81,6 +81,34 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
         subtitle="Today is a lovely day ✿"
         right={null} />
       
+
+      {/* missed previous month close banner */}
+      {!prevMonthClosed && (
+        <div style={{ padding: '4px 20px 0' }}>
+          <div className="tap" onClick={onOpenPrevClose} style={{
+            background: 'linear-gradient(135deg, #F0EEF8 0%, #E8E6F5 100%)',
+            borderRadius: 18, padding: '10px 14px',
+            display: 'flex', alignItems: 'center', gap: 10,
+            border: '1px dashed #C4BFDF',
+          }}>
+            <div style={{
+              width: 32, height: 32, borderRadius: 10,
+              background: 'linear-gradient(135deg, #B9B0E0 0%, #9A8FCC 100%)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: '#fff', fontSize: 15, fontWeight: 700, flexShrink: 0,
+            }}>↩</div>
+            <div style={{ flex: 1 }}>
+              <div style={{ fontSize: 13, color: 'var(--ink)', fontWeight: 700 }}>
+                上個月還沒結算 ✿
+              </div>
+              <div style={{ fontSize: 11, color: 'var(--ink-soft)', marginTop: 1 }}>
+                補個結算，把結餘存進金庫
+              </div>
+            </div>
+            <span style={{ fontSize: 13, color: '#7B6BA8', fontWeight: 700 }}>補結算 →</span>
+          </div>
+        </div>
+      )}
 
       {/* month-end ceremony banner */}
       {showCloseBanner && isNearMonthEnd && (
