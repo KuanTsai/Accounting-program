@@ -46,8 +46,10 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
   const items = envelopes
     .filter(env => env.total > 0)
     .map(env => {
+      // Effective budget = base total + one-time rollover bonus from previous month (if any)
+      const effectiveTotal = (env.total || 0) + (env.rolloverBonus || 0);
       const used = (envExplicit[env.id] || 0) + (env.cats || []).reduce((s, cid) => s + (catImplicit[cid] || 0), 0);
-      return { envId: env.id, label: env.label, emoji: env.emoji, color: env.color, bg: env.bg, total: env.total, used, leftover: Math.max(0, env.total - used), vault: env.vault };
+      return { envId: env.id, label: env.label, emoji: env.emoji, color: env.color, bg: env.bg, total: effectiveTotal, used, leftover: Math.max(0, effectiveTotal - used), vault: env.vault };
     })
     .filter(it => it.leftover > 0);
 
@@ -113,10 +115,11 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
         const budgetDoc = await budgetRef.get();
         if (budgetDoc.exists) {
           const envs = (budgetDoc.data().envelopes || []).map(env => {
+            const { rolloverBonus: _old, ...base } = env;
             const match = rolloverItems.find(it => it.envId === env.id);
-            return match ? { ...env, total: (env.total || 0) + match.leftover } : env;
+            return match ? { ...base, rolloverBonus: match.leftover } : base;
           });
-          await budgetRef.update({ envelopes: envs, total: envs.reduce((s, e) => s + (e.total || 0), 0) });
+          await budgetRef.update({ envelopes: envs });
         }
       }
       const closeKey = `${closeYear}-${String(closeMonth + 1).padStart(2, '0')}`;

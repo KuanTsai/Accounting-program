@@ -42,22 +42,25 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
   const todayLabel = `${_now.getMonth() + 1}/${_now.getDate()}`;
 
   // envelope budget stats — explicit envelope selection takes priority over category matching
+  // effectiveTotal = base total + one-time rolloverBonus from last month's close (if any)
   const envsWithUsed = envelopes.map(env => ({
     ...env,
+    effectiveTotal: (env.total || 0) + (env.rolloverBonus || 0),
     used: (envExplicit[env.id] || 0) + (env.cats || []).reduce((s, catId) => s + (catUsed[catId] || 0), 0),
   }));
-  const budgetTotal = envsWithUsed.reduce((s, e) => s + (e.total || 0), 0);
+  const budgetTotal = envsWithUsed.reduce((s, e) => s + e.effectiveTotal, 0);
   const budgetUsed = envsWithUsed.reduce((s, e) => s + e.used, 0);
   const budgetRemaining = Math.max(0, budgetTotal - budgetUsed);
   const budgetPct = budgetTotal > 0 ? Math.max(0, Math.min((budgetUsed / budgetTotal) * 100, 100)) : 0;
   const budgetOver = budgetTotal > 0 && budgetUsed > budgetTotal;
+  const totalRolloverBonus = envsWithUsed.reduce((s, e) => s + (e.rolloverBonus || 0), 0);
   const daysLeft = (() => {
     const last = new Date(_now.getFullYear(), _now.getMonth() + 1, 0).getDate();
     return Math.max(1, last - _now.getDate() + 1);
   })();
   // 每日可花：只算有 daily: true 的信封
   const dailyEnvs = envsWithUsed.filter(e => e.daily);
-  const dailyBudget = dailyEnvs.reduce((s, e) => s + (e.total || 0), 0);
+  const dailyBudget = dailyEnvs.reduce((s, e) => s + e.effectiveTotal, 0);
   const dailyUsed = dailyEnvs.reduce((s, e) => s + e.used, 0);
   // 今日剩餘：每天可花 − 今天在 daily 信封裡的花費
   const dailyCatIds = new Set(dailyEnvs.flatMap(e => e.cats || []));
@@ -223,6 +226,11 @@ function HomeScreen({ data, onAdd, onOpenTx, foxMood, onOpenClose, onOpenFox, on
                   : `已花 $${budgetUsed.toLocaleString()} ／ $${budgetTotal.toLocaleString()}`
                 }
               </div>
+              {totalRolloverBonus > 0 && (
+                <div style={{ fontSize: 10, color: '#5BA37D', textAlign: 'right', marginTop: 2, fontWeight: 500 }}>
+                  含上月結餘 +${totalRolloverBonus.toLocaleString()}
+                </div>
+              )}
               {/* daily budget */}
               <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
                 <div style={{ flex: 1, background: budgetOver ? '#FFE0E0' : '#E2F4E8', borderRadius: 18, padding: '10px 14px' }}>

@@ -198,20 +198,24 @@ function StatsScreen({ data, transactions = [], envelopes = [] }) {
           <div className="hand" style={{ fontSize: 20, color: 'var(--ink)', marginBottom: 10 }}>信封分析</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             {envelopes.map(env => {
+              const effectiveTotal = (env.total || 0) + (env.rolloverBonus || 0);
               const used = (envExplicit[env.id] || 0) + (env.cats || []).reduce((s, cid) => s + (catImplicit[cid] || 0), 0);
-              const pct  = env.total > 0 ? Math.max(0, Math.min(100, Math.round((used / env.total) * 100))) : 0;
-              const over = used > env.total;
+              const pct  = effectiveTotal > 0 ? Math.max(0, Math.min(100, Math.round((used / effectiveTotal) * 100))) : 0;
+              const over = used > effectiveTotal;
               return (
                 <div key={env.id} style={{ background: 'var(--card)', borderRadius: 18, padding: '12px 14px', boxShadow: 'var(--shadow-sm)' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                     <div style={{ width: 36, height: 36, borderRadius: 12, background: env.bg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18, flexShrink: 0 }}>{env.emoji}</div>
                     <div style={{ flex: 1 }}>
                       <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--ink)' }}>{env.label}</div>
-                      <div style={{ fontSize: 11, color: 'var(--ink-soft)' }}>預算 ${env.total.toLocaleString()}</div>
+                      <div style={{ fontSize: 11, color: 'var(--ink-soft)' }}>
+                        預算 ${effectiveTotal.toLocaleString()}
+                        {env.rolloverBonus > 0 && <span style={{ color: 'var(--accent)', marginLeft: 4 }}>+${env.rolloverBonus.toLocaleString()}結餘</span>}
+                      </div>
                     </div>
                     <div style={{ textAlign: 'right' }}>
                       <div style={{ fontSize: 15, fontWeight: 700, color: over ? '#E05A5A' : '#3B8A5C', fontVariantNumeric: 'tabular-nums' }}>
-                        {over ? `超 $${(used - env.total).toLocaleString()}` : `剩 $${(env.total - used).toLocaleString()}`}
+                        {over ? `超 $${(used - effectiveTotal).toLocaleString()}` : `剩 $${(effectiveTotal - used).toLocaleString()}`}
                       </div>
                       <div style={{ fontSize: 10, color: over ? '#E05A5A' : 'var(--ink-soft)' }}>
                         {over ? '超支！' : `已用 $${used.toLocaleString()}`}

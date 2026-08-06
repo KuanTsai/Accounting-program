@@ -703,12 +703,14 @@ function App() {
               if (rolloverItems.length === 0) { tx.update(doc.ref, { rolloverApplied: true }); return; }
               const budgetSnap = await tx.get(budgetRef);
               if (!budgetSnap.exists) { tx.update(doc.ref, { rolloverApplied: true }); return; }
+              // Use rolloverBonus (one-time field) instead of permanently bumping total.
+              // Clear any previous rolloverBonus on ALL envelopes first, then set the new one.
               const envs = (budgetSnap.data().envelopes || []).map(env => {
+                const { rolloverBonus: _old, ...base } = env;
                 const match = rolloverItems.find(it => it.envId === env.id);
-                return match ? { ...env, total: (env.total || 0) + match.leftover } : env;
+                return match ? { ...base, rolloverBonus: match.leftover } : base;
               });
-              const newTotal = envs.reduce((s, e) => s + (e.total || 0), 0);
-              tx.update(budgetRef, { envelopes: envs, total: newTotal });
+              tx.update(budgetRef, { envelopes: envs });
               tx.update(doc.ref, { rolloverApplied: true });
             })
           ), Promise.resolve());
