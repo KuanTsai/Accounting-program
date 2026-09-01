@@ -43,8 +43,8 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
     }
   });
 
-  const items = envelopes
-    .filter(env => env.total > 0)
+  const budgetedEnvelopes = envelopes.filter(env => env.total > 0);
+  const items = budgetedEnvelopes
     .map(env => {
       // Effective budget = base total + one-time rollover bonus from previous month (if any)
       const effectiveTotal = (env.total || 0) + (env.rolloverBonus || 0);
@@ -152,7 +152,7 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
     );
   }
 
-  if (items.length === 0) {
+  if (budgetedEnvelopes.length === 0) {
     return (
       <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
         <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
@@ -169,6 +169,47 @@ function MonthlyCloseScreen({ onClose, onConfirm, transactions = [], goalPots = 
           </div>
           <div className="tap" onClick={onClose} style={{ marginTop: 8, padding: '10px 24px', borderRadius: 14, background: 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 14 }}>
             去設定預算
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (items.length === 0) {
+    const doEmptyClose = async () => {
+      if (saving) return;
+      setSaving(true);
+      const uid = window.auth.currentUser?.uid;
+      if (!uid) { setSaving(false); return; }
+      try {
+        const closeKey = `${closeYear}-${String(closeMonth + 1).padStart(2, '0')}`;
+        await window.db.collection('users').doc(uid).collection('closes').doc(closeKey).set({
+          closedAt: firebase.firestore.FieldValue.serverTimestamp(),
+          totalSaved: 0, totalRollover: 0, month: closeMonthLabel,
+          items: [], rolloverApplied: true,
+        });
+        setConfirmed(true);
+      } catch (e) {
+        console.error('Close failed', e);
+        setSaving(false);
+      }
+    };
+    return (
+      <div style={{ height: '100%', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+        <div style={{ padding: '14px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div className="tap" onClick={onClose} style={{ width: 36, height: 36, borderRadius: 12, background: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--shadow-sm)' }}>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--ink)" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </div>
+          <div className="hand" style={{ fontSize: 22, color: 'var(--ink)' }}>{isPastClose ? '補' : ''}{closeMonthLabel}結算</div>
+        </div>
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '0 30px', textAlign: 'center', gap: 16 }}>
+          <Fox mood="celebrate" size={80} fur={foxFur} accessory={foxAccessory}/>
+          <div className="hand" style={{ fontSize: 20, color: 'var(--ink)' }}>{closeMonthLabel}預算剛好花完！</div>
+          <div style={{ fontSize: 13, color: 'var(--ink-soft)', lineHeight: 1.6 }}>
+            這個月每分錢都花得很充實，<br/>沒有結餘要存入 ✿
+          </div>
+          <div className="tap" onClick={doEmptyClose} style={{ marginTop: 8, padding: '12px 32px', borderRadius: 14, background: saving ? 'var(--ink-faint)' : 'var(--accent)', color: '#fff', fontWeight: 700, fontSize: 15 }}>
+            {saving ? '結算中…' : '完成結算'}
           </div>
         </div>
       </div>
